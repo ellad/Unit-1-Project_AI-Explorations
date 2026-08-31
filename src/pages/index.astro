@@ -185,6 +185,8 @@ const structuredData = [
           <button type="button" class="aipf-link" id="aipf-reset">Reset</button>
           <span class="aipf-tools-sep">·</span>
           <button type="button" class="aipf-link" id="aipf-share">Copy link</button>
+          <span class="aipf-tools-sep">·</span>
+          <button type="button" class="aipf-link" id="aipf-share-summary">Copy my summary</button>
         </p>
       </div>
 
@@ -885,6 +887,22 @@ const structuredData = [
         '<div class="aipf-prop-cap"><span class="accent">your AI use</span><span>a full day</span></div>';
     }
 
+    // Short, shareable one-liner for the "Copy my summary" button — same
+    // percentage math as renderHeadline, in plain text instead of markup.
+    function buildSummaryText() {
+      const t = aiDailyTriple(state.metric);
+      const ai = t[0], day = dailyFootprint(state.metric);
+      const pct = day > 0 ? (ai / day) * 100 : 0;
+      let pctStr;
+      if (pct >= 1) pctStr = pct.toFixed(pct >= 10 ? 0 : 1) + '%';
+      else if (pct >= 0.01) pctStr = pct.toFixed(2) + '%';
+      else if (pct > 0) pctStr = 'under 0.01%';
+      else pctStr = '0%';
+      const aiYr = ai * DAYS;
+      return 'My daily AI use is ' + pctStr + ' of my daily ' + metricWord() + ' footprint: ' +
+        fmtMetric(ai) + ' today, ' + fmtMetric(aiYr) + ' a year. (' + location.origin + location.pathname + ')';
+    }
+
     function renderGridNote() {
       const box = root.querySelector('#aipf-grid-note');
       box.style.display = '';
@@ -1088,6 +1106,11 @@ const structuredData = [
         const btn = e.currentTarget;
         const done = () => { btn.textContent = 'Link copied'; setTimeout(() => { btn.textContent = 'Copy a link to this estimate'; }, 1800); };
         try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(buildShareURL()).then(done, done); else done(); } catch (err) { done(); }
+      });
+      root.querySelector('#aipf-share-summary').addEventListener('click', (e) => {
+        const btn = e.currentTarget;
+        const done = () => { btn.textContent = 'Summary copied'; setTimeout(() => { btn.textContent = 'Copy my summary'; }, 1800); };
+        try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(buildSummaryText()).then(done, done); else done(); } catch (err) { done(); }
       });
       const rb = root.querySelector('#aipf-report'); if (rb) rb.addEventListener('click', generateReport);
       const eb = root.querySelector('#aipf-embed-copy');
