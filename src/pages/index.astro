@@ -543,6 +543,16 @@ const structuredData = [
       { label: 'A dryer load',             c: 1.2,  w: 0.1 },
       { label: 'Printing a 400-page book', c: 2.7,  w: 300 },
       { label: 'A beef burger',            c: 3.0,  w: 460 },
+      // Workplace comparisons (rough order-of-magnitude estimates, not sourced
+      // to the same rigor as the figures above): video call ~ Obringer et al.
+      // 2021 (an hour of videoconferencing: >=150 g CO2e, >=2 L water); report
+      // printing scaled from the book figure above; office AC uses the same
+      // ~3 kWh/hour and US grid (~0.38 kg/kWh) as the methodology section;
+      // commute uses the page's own gas-car g/mile figure over 10 miles.
+      { label: 'An hour of a work video call',   c: 0.15, w: 0.53 },
+      { label: 'Printing a 20-page work report', c: 0.135, w: 15 },
+      { label: 'An hour of office air conditioning', c: 1.14, w: 1.4 },
+      { label: 'A 10-mile round-trip commute',   c: 4.0,  w: 0.6 },
     ];
     // Annual reference points. dir: 'add' = emissions you cause, 'save' = a cut you make.
     // Lifestyle-cut figures from Founders Pledge / Wynes & Nicholas via AndyMasley.Substack.com.
@@ -587,6 +597,10 @@ const structuredData = [
       { label: 'A day of home electricity',   w: 14 },
       { label: 'An avocado',             w: 16 },
       { label: 'A handful of almonds',   w: 32 },
+      // Workplace comparisons, same rough estimates as DAILY_ITEMS above.
+      { label: 'An hour of a work video call', w: 0.53 },
+      { label: 'Printing a work report', w: 0.33 },
+      { label: 'A 10-mile round-trip commute', w: 0.15 },
     ];
     const ANNUAL_WATER_ITEMS = [
       { label: 'A year of daily coffee',           w: 365,    dir: 'add' },
