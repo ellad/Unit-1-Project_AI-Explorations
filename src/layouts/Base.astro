@@ -1,0 +1,75 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  canonicalUrl?: string;
+  ogTitle?: string;
+  ogImage?: string;
+  ogImageAlt?: string;
+  keywords?: string[];
+  structuredData?: unknown[];
+}
+
+const { title, description, canonicalUrl, ogTitle, ogImage, ogImageAlt, keywords, structuredData } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    {keywords && keywords.length > 0 && <meta name="keywords" content={keywords.join(', ')} />}
+    {ogTitle && <meta property="og:title" content={ogTitle} />}
+    {description && <meta property="og:description" content={description} />}
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    {ogImageAlt && <meta property="og:image:alt" content={ogImageAlt} />}
+    {structuredData && structuredData.map((entry) => (
+      <script type="application/ld+json" set:html={JSON.stringify(entry)} />
+    ))}
+    <style is:global>
+      :root {
+        --font-editorial: Georgia, 'Times New Roman', serif;
+        --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+        --max-width: 56rem;
+        --text: #1c1c1c;
+        --text-secondary: #4a4a4a;
+        --dim: #767676;
+        --border: #ddd8d0;
+        --border-strong: #b9b2a6;
+        --bg: #fdfcfa;
+        --bg-subtle: #f4f2ee;
+        --bg-elevated: #ffffff;
+        --accent: #2f6f4f;
+        --accent-hover: #245a3f;
+        --accent-subtle: #e4efe8;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --text: #ececec;
+          --text-secondary: #b8b8b8;
+          --dim: #8a8a8a;
+          --border: #3a3a3a;
+          --border-strong: #4d4d4d;
+          --bg: #17181a;
+          --bg-subtle: #202124;
+          --bg-elevated: #232426;
+          --accent: #6fbf94;
+          --accent-hover: #8ad1ac;
+          --accent-subtle: #1e2e26;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-body);
+      }
+    </style>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
