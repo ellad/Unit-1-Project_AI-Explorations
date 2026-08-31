@@ -185,8 +185,6 @@ const structuredData = [
           <button type="button" class="aipf-link" id="aipf-reset">Reset</button>
           <span class="aipf-tools-sep">·</span>
           <button type="button" class="aipf-link" id="aipf-share">Copy link</button>
-          <span class="aipf-tools-sep">·</span>
-          <button type="button" class="aipf-link" id="aipf-share-summary">Copy my summary</button>
         </p>
       </div>
 
@@ -202,6 +200,9 @@ const structuredData = [
           </p>
         </div>
         <div class="aipf-verdict" id="aipf-headline" aria-live="polite"></div>
+        <p class="aipf-tools aipf-tools--summary">
+          <button type="button" class="aipf-link" id="aipf-share-summary">Copy my summary</button>
+        </p>
         <div class="aipf-mini">
           <p class="aipf-chart-title">A day of your AI use vs. everyday things</p>
           <p class="aipf-mini-h" id="aipf-daily-sub"></p>
@@ -1228,6 +1229,7 @@ const structuredData = [
 
   .aipf-running { margin: 1rem 0 0; padding-top: 0.9rem; border-top: 1px solid var(--border); font-size: 1.05rem; line-height: 1.6; color: var(--text-secondary); }
   .aipf-tools { margin: 0.6rem 0 0; font-family: var(--font-body); font-size: 0.78rem; color: var(--dim); }
+  .aipf-tools--summary { margin-top: 0.9rem; }
   .aipf-link { background: none; border: none; padding: 0; font: inherit; color: var(--dim); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
   .aipf-link:hover { color: var(--accent); }
   .aipf-tools-sep { margin: 0 0.45rem; }
