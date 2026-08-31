@@ -223,6 +223,15 @@ const structuredData = [
       <div class="aipf-bars" id="aipf-cut-bars" aria-live="polite"></div>
     </div>
 
+    <div class="aipf-below" aria-label="What if your whole company did this">
+      <h2 class="aipf-h2">What if your whole company did this?</h2>
+      <p class="aipf-sub">
+        How many people work at your company?
+        <input type="number" class="aipf-headcount" id="aipf-headcount" min="1" max="1000000" step="1" value="300" aria-label="Number of employees" />
+      </p>
+      <p class="aipf-sub" id="aipf-company-sub" aria-live="polite"></p>
+    </div>
+
     <details class="aipf-method" id="methodology">
       <summary>How these numbers are made</summary>
       <div class="aipf-method-body">
@@ -617,7 +626,7 @@ const structuredData = [
     const DAYS = 365;
 
     let uidSeq = 1;
-    const state = { rows: [], metric: 'carbon', loc: 'us', home: 'med', drive: 'davg', diet: 'avg', fly: 'some' };
+    const state = { rows: [], metric: 'carbon', loc: 'us', home: 'med', drive: 'davg', diet: 'avg', fly: 'some', headcount: 300 };
 
     let root = null;
     const getModel = (id) => MODELS.find((m) => m.id === id) || MODELS[0];
@@ -952,9 +961,27 @@ const structuredData = [
       root.querySelector('#aipf-cut-sub').innerHTML = 'Cutting your AI use (highlighted) would save ' + fmtUnit(aiYr, unit) + ' a year, next to the bigger cuts you could make.';
       renderBars('#aipf-cut-bars', 'Cut your AI use', aiYr, cuts, unit);
     }
+    // Scales one person's annual footprint up by headcount, set against one
+    // recognizable annual-chart item (a transatlantic flight for carbon, a
+    // new smartphone for water) so a whole company's AI use stays legible.
+    function renderCompany() {
+      const sub = root.querySelector('#aipf-company-sub');
+      if (!sub) return;
+      const companyAnnual = aiDaily(state.metric) * DAYS * state.headcount;
+      const people = state.headcount.toLocaleString('en-US');
+      if (state.metric === 'carbon') {
+        const flightG = 1600 * 1000; // one transatlantic flight, ANNUAL_ITEMS c: 1600 (kg)
+        sub.innerHTML = 'All ' + people + ' of you, using AI like this every day for a year, adds up to about <strong>' +
+          fmtNum(companyAnnual / flightG) + ' transatlantic flights’</strong> worth of carbon — combined, for the whole company.';
+      } else {
+        const phoneL = 3370 * GAL_TO_L; // one new smartphone, ANNUAL_WATER_ITEMS w: 3370 (gal)
+        sub.innerHTML = 'All ' + people + ' of you, using AI like this every day for a year, adds up to about <strong>' +
+          fmtNum(companyAnnual / phoneL) + ' new smartphones’</strong> worth of water — combined, for the whole company.';
+      }
+    }
 
     function updateOutputs() {
-      renderRunning(); updateRowMeta(); renderHeadline(); renderGridNote(); renderWords(); renderDaily(); renderAnnualSplit();
+      renderRunning(); updateRowMeta(); renderHeadline(); renderGridNote(); renderWords(); renderDaily(); renderAnnualSplit(); renderCompany();
     }
     // ---- Cited report ----
     function escXml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
@@ -1080,6 +1107,11 @@ const structuredData = [
       root.querySelector('#aipf-diet').addEventListener('change', (e) => { state.diet = e.target.value; updateOutputs(); });
       root.querySelector('#aipf-fly').addEventListener('change', (e) => { state.fly = e.target.value; updateOutputs(); });
       root.querySelectorAll('.aipf-metric').forEach((b) => { b.addEventListener('click', () => { state.metric = b.dataset.metric; renderMetricToggle(); updateOutputs(); }); });
+      root.querySelector('#aipf-headcount').addEventListener('input', (e) => {
+        const n = Math.round(Number(e.target.value));
+        state.headcount = Number.isFinite(n) && n > 0 ? Math.min(n, 1000000) : 1;
+        updateOutputs();
+      });
     }
     function init() {
       root = document.getElementById('aipf');
@@ -1190,6 +1222,13 @@ const structuredData = [
   }
   .aipf-life select:hover { border-color: var(--accent); color: var(--accent); }
   .aipf-life select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .aipf-headcount {
+    font-family: var(--font-body); font-size: 0.84rem; font-weight: 600; color: var(--text);
+    background-color: var(--bg-elevated); border: 1px solid var(--border-strong); border-radius: 5px;
+    padding: 0.14rem 0.5rem; width: 6ch;
+  }
+  .aipf-headcount:hover { border-color: var(--accent); color: var(--accent); }
+  .aipf-headcount:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   /* Top toolbar: metric toggle on the left, report button on the right */
   .aipf-toolbar-top { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem 1rem; flex-wrap: wrap; margin-bottom: 1.1rem; }
