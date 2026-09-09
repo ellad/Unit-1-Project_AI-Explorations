@@ -151,6 +151,13 @@ const structuredData = [
       </p>
     </header>
 
+    <div class="aipf-pagetabs" role="tablist" aria-label="View">
+      <button type="button" class="aipf-pagetab is-active" data-tab="calc" role="tab" aria-selected="true" id="aipf-pagetab-calc" aria-controls="aipf-tab-calc">Calculator</button>
+      <button type="button" class="aipf-pagetab" data-tab="water" role="tab" aria-selected="false" id="aipf-pagetab-water" aria-controls="aipf-tab-water">Water use around the world</button>
+    </div>
+
+    <div id="aipf-tab-calc" class="aipf-tabpanel" role="tabpanel" aria-labelledby="aipf-pagetab-calc">
+
     <div class="aipf-toolbar-top">
       <div class="aipf-toggle" role="group" aria-label="Footprint type">
         <span class="aipf-toggle-label">Show</span>
@@ -348,8 +355,8 @@ const structuredData = [
           cross-country flight ≈ 1 t, and a transatlantic round trip ≈ 1.6 t. A year of average US
           driving (~12,000 mi) ≈ 4.8 t at ~0.40 kg/mile
           (<a href="https://www.epa.gov/greenvehicles/greenhouse-gas-emissions-typical-passenger-vehicle" target="_blank" rel="noopener">EPA</a>).
-          A beef burger every week for a year ≈ 156 kg
-          (<a href="https://www.science.org/doi/10.1126/science.aaq0216" target="_blank" rel="noopener">Poore &amp; Nemecek</a>, ~3 kg each);
+          A week-long cruise ≈ 800 kg, averaging a 7.2-day sailing
+          (<a href="https://www.cruisetricks.de/kreuzfahrt-co2-en/" target="_blank" rel="noopener">Humpe, Munich University of Applied Sciences</a>);
           a <a href="https://theconversation.com/coffee-heres-the-carbon-cost-of-your-daily-cup-and-how-to-make-it-climate-friendly-152629" target="_blank" rel="noopener">year of daily coffee ≈ 77 kg</a>;
           a <a href="https://howbadarebananas.com/" target="_blank" rel="noopener">cotton T-shirt ≈ 7 kg</a>;
           a new smartphone ≈ 70 kg (<a href="https://www.apple.com/environment/" target="_blank" rel="noopener">Apple</a>);
@@ -366,8 +373,9 @@ const structuredData = [
           a <a href="https://www.energystar.gov/products/clothes_dryers" target="_blank" rel="noopener">dryer load (~3 kWh)</a>;
           <a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1530-9290.2011.00414.x" target="_blank" rel="noopener">printing a 400-page book (~2.7 kg, Wells 2012)</a>
           with <a href="https://waterfootprint.org/resources/Report46-WaterFootprintPaper.pdf" target="_blank" rel="noopener">paper's water footprint</a>;
-          a beef burger (~3 kg, <a href="https://www.science.org/doi/10.1126/science.aaq0216" target="_blank" rel="noopener">Poore &amp; Nemecek</a>; ~1,700 L at
-          <a href="https://watercalculator.org/footprint/the-hidden-water-in-everyday-products/" target="_blank" rel="noopener">15,400 L/kg beef</a>);
+          a round of golf (~10.5 kg CO<sub>2</sub>e, averaging a
+          <a href="https://golfsustainable.com/en/co2-and-golf-what-is-the-footprint/" target="_blank" rel="noopener">Swiss Golf life-cycle study and a German golf club's own calculation</a>,
+          both including the golfer's travel to and from the course; ~3,690 L of irrigation water, see the water methodology above);
           a <a href="https://www.apple.com/environment/" target="_blank" rel="noopener">new smartphone (~70 kg, Apple)</a>
           needing <a href="https://www.compareandrecycle.co.uk/blog/world-water-week-how-much-water-does-your-smartphone-use" target="_blank" rel="noopener">~12,800 L</a>;
           a <a href="https://www.levistrauss.com/wp-content/uploads/2015/03/Full-LCA-Results-Deck-FINAL.pdf" target="_blank" rel="noopener">pair of jeans (~33 kg, Levi's)</a>
@@ -385,20 +393,34 @@ const structuredData = [
         </p>
         <p>
           <strong>Water comparisons (blue water).</strong> The water charts use the
-          <strong>blue</strong> (freshwater) component only, so the comparison items are the
-          irrigation- and process-water heavy ones, from the
-          <a href="https://watercalculator.org/footprint/the-hidden-water-in-everyday-products/" target="_blank" rel="noopener">Water Footprint Network</a>
-          and crop studies: a beef burger (~6 L, since beef is ~90% rainwater), a cup of coffee
-          (~4 L), a slice of bread (~8 L), an egg (~15 L), a glass of milk (~22 L), a bowl of rice
-          (~25 L), an avocado (~60 L), a handful of almonds (~120 L, as
-          <a href="https://www.almonds.org/sites/default/files/2020-05/Water_footprint_plus_almonds.pdf" target="_blank" rel="noopener">each California almond takes ~12 L of irrigation</a>),
-          a cotton T-shirt (~1,500 L of its 2,700 L total is blue), a pair of jeans (~5,000 L), and a
+          <strong>blue</strong> (freshwater) component only, and deliberately skip food for these
+          comparisons — everyone needs to eat, but nobody needs a cigarette, a cut flower, or a
+          round of golf. A disposable plastic water bottle takes roughly its own volume again in
+          production water beyond what's inside it
+          (<a href="https://pacinst.org/wp-content/uploads/2013/02/bottled_water_and_energy3.pdf" target="_blank" rel="noopener">Pacific Institute</a>).
+          A cigarette's water footprint is about 3.7 L across its whole supply chain
+          (<a href="https://pubs.acs.org/doi/10.1021/acs.est.8b01533" target="_blank" rel="noopener">Environmental Science &amp; Technology, 2018</a>;
+          left on a total, not blue-only, basis since tobacco's green/blue split isn't separately
+          published). An imported cut rose consumes about 4 L of blue irrigation water per stem on
+          Kenya's flower farms
+          (<a href="https://www.waterfootprint.org/resources/Report45-WaterFootprint-Flowers-Kenya.pdf" target="_blank" rel="noopener">Water Footprint Network, Report 45</a>).
+          A glass of beer (~75 L total) and a 125 mL glass of wine (~110 L total) are shown at their
+          blue share only, using wine grapes' global blue-water fraction of about 16%
+          (<a href="https://www.waterfootprint.org/resources/Mekonnen-Hoekstra-2011-WaterFootprintCrops.pdf" target="_blank" rel="noopener">Mekonnen &amp; Hoekstra 2011</a>)
+          as a stand-in for both. A cotton T-shirt (~1,500 L of its 2,700 L total is blue), a pair of
+          jeans (~5,000 L), and a
           <a href="https://www.compareandrecycle.co.uk/blog/world-water-week-how-much-water-does-your-smartphone-use" target="_blank" rel="noopener">new smartphone</a>
-          (mostly ultrapure freshwater). The savings come from cutting irrigated products (a few
-          fewer cotton clothes) and outdoor watering: a typical lawn drinks roughly 20,000 gal of
-          freshwater a year, so letting it go unwatered or replacing it with native plants saves most
-          of that (<a href="https://www.epa.gov/watersense/landscaping-tips" target="_blank" rel="noopener">EPA WaterSense</a>).
-          Eating less meat barely moves the blue total, because almost all of meat's water is rain.
+          (mostly ultrapure freshwater) round out the manufactured goods. A round of golf is
+          estimated by dividing the golf industry's own reported irrigation total — about 1.63
+          million acre-feet (531 billion gallons) applied to US courses in 2024
+          (<a href="https://www.gcsaa.org/docs/default-source/environment/22_waterreport_web.pdf" target="_blank" rel="noopener">GCSAA</a>)
+          — by the 545 million rounds played that year
+          (<a href="https://www.ngf.org/full-shots/rounds-played-summary-for-2024-play-now-available/" target="_blank" rel="noopener">National Golf Foundation</a>),
+          for roughly 975 gallons of irrigation water per round. The savings come from cutting
+          irrigated products (a few fewer cotton clothes) and outdoor watering: a typical lawn
+          drinks roughly 20,000 gal of freshwater a year, so letting it go unwatered or replacing it
+          with native plants saves most of that
+          (<a href="https://www.epa.gov/watersense/landscaping-tips" target="_blank" rel="noopener">EPA WaterSense</a>).
           Energy and manufactured goods have a blue-water cost too: thermoelectric power plants
           evaporate about
           <a href="https://www.nrel.gov/docs/fy11osti/50900.pdf" target="_blank" rel="noopener">0.47 gal of freshwater per kWh</a>
@@ -450,6 +472,29 @@ const structuredData = [
       </a>
       <span>To the extent possible under law, Andrew Masley has waived all copyright and related or neighboring rights to this work. It is dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener license">CC0 1.0</a>.</span>
     </p>
+
+    </div>
+
+    <div id="aipf-tab-water" class="aipf-tabpanel" role="tabpanel" aria-labelledby="aipf-pagetab-water" hidden>
+      <p class="aipf-dek">
+        A companion piece by the same author: how AI's water use compares against data centers,
+        industries, farms, cities, and lawns — not per prompt, but at the scale of whole systems.
+        This is <a href="https://andymasley.com/visuals/water/" target="_blank" rel="noopener">Andy Masley's own page</a>,
+        shown below in an embedded frame. Unlike the calculator above, this one is his own
+        copyrighted work rather than public domain, so it's framed here rather than copied in.
+      </p>
+      <div class="aipf-water-embed">
+        <iframe
+          id="aipf-water-iframe"
+          data-src="https://andymasley.com/visuals/water/"
+          title="How Thirsty is AI? — water use comparison by Andy Masley"
+          loading="lazy"
+        ></iframe>
+      </div>
+      <p class="aipf-fine">
+        Having trouble viewing it here? <a href="https://andymasley.com/visuals/water/" target="_blank" rel="noopener">Open it directly on andymasley.com</a>.
+      </p>
+    </div>
   </article>
 </Base>
 
@@ -554,7 +599,7 @@ const structuredData = [
       { label: 'A dishwasher load',        c: 0.5,  w: 3.5 },
       { label: 'A dryer load',             c: 1.2,  w: 0.1 },
       { label: 'Printing a 400-page book', c: 2.7,  w: 300 },
-      { label: 'A beef burger',            c: 3.0,  w: 460 },
+      { label: 'A round of golf',          c: 10.5, w: 3690 },
       // Workplace comparisons (rough order-of-magnitude estimates, not sourced
       // to the same rigor as the figures above): video call ~ Obringer et al.
       // 2021 (an hour of videoconferencing: >=150 g CO2e, >=2 L water); report
@@ -575,7 +620,7 @@ const structuredData = [
       { label: 'A year of daily coffee',          c: 77,   w: 0,      dir: 'add' },
       { label: 'A new sofa',                      c: 90,   w: 0,      dir: 'add' },
       { label: 'A new bicycle',                   c: 100,  w: 0,      dir: 'add' },
-      { label: 'A beef burger every week (1 yr)', c: 156,  w: 0,      dir: 'add' },
+      { label: 'A week-long cruise',              c: 800,  w: 0,      dir: 'add' },
       { label: 'A new laptop',                    c: 250,  w: 0,      dir: 'add' },
       { label: 'A short-haul round-trip flight',  c: 250,  w: 0,      dir: 'add' },
       { label: 'A new flat-screen TV',            c: 350,  w: 0,      dir: 'add' },
@@ -589,37 +634,38 @@ const structuredData = [
       { label: 'Switching to a hybrid car',       c: 480,  w: 0,      dir: 'save' },
       { label: 'Buying green electricity',        c: 1380, w: 0,      dir: 'save' },
       { label: 'Switching to an electric car',    c: 1380, w: 0,      dir: 'save' },
-      { label: 'Going vegan for a year',          c: 1450, w: 270000, dir: 'save' },
+      { label: 'Going vegetarian for a year',     c: 1000, w: 186000, dir: 'save' },
       { label: 'A deep retrofit of your home',    c: 1580, w: 0,      dir: 'save' },
       { label: 'Switching to green heating',      c: 1990, w: 0,      dir: 'save' },
       { label: 'Living car-free',                 c: 2400, w: 0,      dir: 'save' },
     ];
 
     // Blue-water comparisons (gal): freshwater actually withdrawn, green rain excluded.
-    // Irrigated crops (almonds, cotton) and lawns dominate; rain-fed foods nearly vanish.
+    // Deliberately non-food: everyone needs to eat, but nobody needs a cigarette, a cut
+    // flower, or a round of golf. Cotton and golf-course irrigation dominate.
     const DAILY_WATER_ITEMS = [
-      { label: 'A cup of coffee',        w: 1 },
-      { label: 'A beef burger',          w: 1.6 },
-      { label: 'A slice of bread',       w: 2 },
-      { label: 'An egg',                 w: 4 },
-      { label: 'A glass of milk',        w: 6 },
-      { label: 'A bowl of rice',         w: 7 },
+      { label: 'A disposable plastic water bottle', w: 0.3 },
+      { label: 'A cigarette',             w: 1 },
+      { label: 'A cut rose (imported)',   w: 1 },
       { label: 'An hour of air conditioning', w: 1.4 },
       { label: 'Printing a book',        w: 5 },
       { label: 'A day of home electricity',   w: 14 },
-      { label: 'An avocado',             w: 16 },
-      { label: 'A handful of almonds',   w: 32 },
+      { label: 'A glass of beer',         w: 3.2 },
+      { label: 'A glass of wine',         w: 4.6 },
+      { label: 'A dozen roses',           w: 12.7 },
+      { label: 'A pack of cigarettes (20)', w: 19.5 },
+      { label: 'A round of golf (course irrigation)', w: 975 },
       // Workplace comparisons, same rough estimates as DAILY_ITEMS above.
       { label: 'An hour of a work video call', w: 0.53 },
       { label: 'Printing a work report', w: 0.33 },
       { label: 'A 10-mile round-trip commute', w: 0.15 },
     ];
     const ANNUAL_WATER_ITEMS = [
-      { label: 'A year of daily coffee',           w: 365,    dir: 'add' },
+      { label: 'A year of one cigarette a day',    w: 357,    dir: 'add' },
       { label: 'A cotton T-shirt',                 w: 396,    dir: 'add' },
       { label: 'A new pair of jeans',              w: 1321,   dir: 'add' },
       { label: 'A new smartphone',                 w: 3370,   dir: 'add' },
-      { label: 'A year of daily almonds',          w: 11700,  dir: 'add' },
+      { label: 'Golfing once a week for a year',   w: 50700,  dir: 'add' },
       { label: 'Buying five fewer cotton garments (1 yr)', w: 2000, dir: 'save' },
       { label: 'Replacing a lawn with native plants', w: 15000, dir: 'save' },
       { label: 'Letting your lawn go unwatered (1 yr)', w: 20000, dir: 'save' },
@@ -1099,6 +1145,7 @@ const structuredData = [
 
     function renderMetricToggle() {
       root.querySelectorAll('.aipf-metric').forEach((b) => { const on = b.dataset.metric === state.metric; b.classList.toggle('is-active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+      root.dataset.metric = state.metric;
     }
     function bindEvents() {
       root.querySelector('#aipf-addrow').addEventListener('click', () => { state.rows.push({ uid: uidSeq++, model: 'gpt-5.5', size: 'chat', count: 1 }); renderRows(); updateOutputs(); });
@@ -1131,6 +1178,16 @@ const structuredData = [
       root.querySelector('#aipf-diet').addEventListener('change', (e) => { state.diet = e.target.value; updateOutputs(); });
       root.querySelector('#aipf-fly').addEventListener('change', (e) => { state.fly = e.target.value; updateOutputs(); });
       root.querySelectorAll('.aipf-metric').forEach((b) => { b.addEventListener('click', () => { state.metric = b.dataset.metric; renderMetricToggle(); updateOutputs(); }); });
+      root.querySelectorAll('.aipf-pagetab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          root.querySelectorAll('.aipf-pagetab').forEach((t) => { t.classList.toggle('is-active', t === tab); t.setAttribute('aria-selected', String(t === tab)); });
+          root.querySelectorAll('.aipf-tabpanel').forEach((p) => { p.hidden = p.id !== 'aipf-tab-' + tab.dataset.tab; });
+          if (tab.dataset.tab === 'water') {
+            const iframe = root.querySelector('#aipf-water-iframe');
+            if (iframe && !iframe.src) iframe.src = iframe.dataset.src;
+          }
+        });
+      });
       root.querySelector('#aipf-headcount').addEventListener('input', (e) => {
         const n = Math.round(Number(e.target.value));
         state.headcount = Number.isFinite(n) && n > 0 ? Math.min(n, 1000000) : 1;
@@ -1163,6 +1220,24 @@ const structuredData = [
   .aipf a:hover { color: var(--accent); }
   .aipf b { font-weight: 600; color: var(--text); }
 
+  /* Carbon (green, the default) vs. water (blue) — recolors every var(--accent)
+     use in the calculator, since state.metric is mirrored onto data-metric.
+     --bar-bright/--bar-dark are a separate pair used only for the per-bar fill
+     gradient (least amount = brightest, most = darkest), kept lighter and more
+     saturated than --accent-subtle so both ends stay legible on a dark page. */
+  .aipf { --bar-bright: #4fd88a; --bar-dark: #1d5c3d; }
+  .aipf[data-metric="water"] {
+    --accent: #2f6a94; --accent-hover: #23516f; --accent-subtle: #e3edf4;
+    --bar-bright: #5ec8f5; --bar-dark: #1a4d73;
+  }
+  @media (prefers-color-scheme: dark) {
+    .aipf { --bar-bright: #9ff2c2; --bar-dark: #2f9d68; }
+    .aipf[data-metric="water"] {
+      --accent: #74b3e0; --accent-hover: #93c5e8; --accent-subtle: #1c2733;
+      --bar-bright: #a8ddfa; --bar-dark: #2f7fc0;
+    }
+  }
+
   /* ---- Header ---- */
   /* Align the title + intro with the site nav rule above (the 640px content column),
      even though the calculator itself breaks out to full width. */
@@ -1173,6 +1248,18 @@ const structuredData = [
     letter-spacing: -0.02em; margin: 0;
   }
   .aipf-dek { font-size: 0.95rem; line-height: 1.5; color: var(--text-secondary); margin: 0.5rem 0 0; }
+
+  /* ---- Page tabs: Calculator vs. the water-use embed ---- */
+  .aipf-pagetabs { display: flex; gap: 1.5rem; margin: 0 0 1.4rem; border-bottom: 1px solid var(--border); }
+  .aipf-pagetab {
+    background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    padding: 0.6rem 0.1rem; font-family: var(--font-body); font-size: 0.92rem; font-weight: 600;
+    color: var(--dim); cursor: pointer; transition: color 0.12s, border-color 0.12s;
+  }
+  .aipf-pagetab:hover { color: var(--text); }
+  .aipf-pagetab.is-active { color: var(--accent); border-bottom-color: var(--accent); }
+  .aipf-water-embed { border: 1px solid var(--border); background: var(--bg-elevated); }
+  .aipf-water-embed iframe { display: block; width: 100%; height: 85vh; min-height: 600px; border: 0; }
 
   /* ---- Tool: two panes in one frame ---- */
   .aipf-tool { display: grid; grid-template-columns: 1.35fr 1fr; border: 1px solid var(--border); background: var(--bg-elevated); }
@@ -1311,10 +1398,19 @@ const structuredData = [
   .aipf-bar-row { display: grid; grid-template-columns: 13rem 1fr auto; align-items: center; gap: 0.8rem; padding: 0.4rem 0; }
   .aipf-bar-label { font-family: var(--font-body); font-size: 0.84rem; color: var(--text-secondary); }
   .aipf-bar-row.is-focal .aipf-bar-label { color: var(--text); font-weight: 600; }
-  .aipf-bar-row.is-focal { background: var(--accent-subtle); margin: 0.15rem -0.6rem; padding: 0.4rem 0.6rem; border-radius: 4px; }
+  .aipf-bar-row.is-focal,
+  .aipf-bar-row:not(.is-focal):hover {
+    background: var(--accent-subtle); margin: 0.15rem -0.6rem; padding: 0.4rem 0.6rem;
+    border-radius: 4px; transition: background-color 0.12s;
+  }
+  .aipf-bar-row:not(.is-focal):hover .aipf-bar-label,
+  .aipf-bar-row:not(.is-focal):hover .aipf-bar-val { color: var(--text); }
   .aipf-bar-track { height: 12px; background: var(--border); }
-  .aipf-bar-fill { height: 100%; background: var(--dim); }
-  .aipf-bar-row.is-focal .aipf-bar-fill { background: var(--accent); min-width: 3px; }
+  /* Every bar carries the same light-to-dark gradient across its own width —
+     the least amount reads brightest, gradually darkening toward the most. */
+  .aipf-bar-fill { height: 100%; background: linear-gradient(to right, var(--bar-bright), var(--bar-dark)); }
+  .aipf-bar-row.is-focal .aipf-bar-fill,
+  .aipf-bar-row:not(.is-focal):hover .aipf-bar-fill { background: var(--accent); min-width: 3px; }
   .aipf-bar-val { font-family: var(--font-body); font-size: 0.8rem; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .aipf-bar-row.is-focal .aipf-bar-val { color: var(--text); font-weight: 600; }
   .aipf-tag { font-family: var(--font-body); font-size: 0.62rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
@@ -1327,7 +1423,8 @@ const structuredData = [
   .aipf-bars--compact .aipf-bar-label { grid-area: label; font-size: 0.84rem; }
   .aipf-bars--compact .aipf-bar-val { grid-area: value; }
   .aipf-bars--compact .aipf-bar-track { grid-area: bar; height: 11px; }
-  .aipf-bars--compact .aipf-bar-row.is-focal { padding: 0.45rem 0.6rem; }
+  .aipf-bars--compact .aipf-bar-row.is-focal,
+  .aipf-bars--compact .aipf-bar-row:not(.is-focal):hover { padding: 0.45rem 0.6rem; }
   .aipf-bars--compact .aipf-bar-row.is-focal .aipf-bar-track { height: 13px; }
 
   /* ---- Methodology ---- */
