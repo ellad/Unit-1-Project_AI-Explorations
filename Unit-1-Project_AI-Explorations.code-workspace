@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../../Downloads/repo-template"
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "Unit-1-Project_AI-Explorations"
+	}
+}
