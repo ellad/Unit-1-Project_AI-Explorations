@@ -18,7 +18,103 @@ Guide planning one stage at a time. Surface dependencies, risks, and verificatio
 
 ## Approach
 
-Describe the technical approach, important dependencies, and the order in which the features will be built. Explain any non-obvious choices and identify likely risks.
+Extend the existing single-page Astro calculator in small, verifiable checkpoints. First, consolidate the client-side state and calculation helpers so text, image, video, and coding-project entries can share validation, retry multipliers, energy/carbon/water calculations, reset, and URL-sharing behavior. Preserve the existing text-row behavior while adding the new entry types.
+
+Build professional-AI features before digital-life comparisons: add retries, then image/video entries and their different point-versus-range displays, then the separate coding-project builder. Add digital-life hours and the always-on router baseline as separate comparison data; neither changes AI-use totals, and the router remains outside the digital-life combined activity total. Finish each feature's visible source, method, and limitation copy before treating it as complete.
+
+Update all derived outputs together: summaries, comparison bars, generated report, methodology, reset/share state, and responsive/accessibility behavior. The optional carbon/water pie chart comes only after the five core features pass their checks; it must use a deliberately selected set of coding sessions without changing the separate project total.
+
+Main risks: this calculator keeps markup, state, math, and rendering in one large Astro file, so state and serialization changes must be coordinated; point estimates for image, streaming, video-call, and social-media entries must never be presented as ranges, while video, text, and gaming retain their documented low–high ranges; and project-scope coding values must not be mistaken for daily values. Derived-water and lower-confidence figures must remain visibly labeled in plain language in both the calculator and exported report.
+
+## Calculation formulas
+
+Use watt-hours (Wh) internally for AI entries and kilowatt-hours (kWh) for electricity-based comparisons; carbon is grams of CO<sub>2</sub>e and water is liters. Apply a retry multiplier once at entry level, before adding an entry to any total. Display formatting and rounding must happen only after calculation.
+
+Shared terms: `R` is the retry/regeneration multiplier (minimum 1); `G` is the selected location's grid factor in g CO<sub>2</sub>e/kWh; `W = 0.47 gal/kWh × 3.78541 L/gal = 1.779 L/kWh` is the NREL-derived water factor; and `Y = 365 days/year`. The current calculator's location factors are US `G=380`, EU `215`, UK `125`, China `580`, India `700`, and world `480`.
+
+### Text-AI entries and retries
+
+For a selected EcoLogits model/output-size record with electricity range `E[low, mean, high]` in Wh, embodied-carbon range `B[low, mean, high]` in g, and water range `A[low, mean, high]` in mL, and an entered prompt count `N`:
+
+`energy[low, mean, high] = N × R × E[low, mean, high]`
+
+`carbon[low, mean, high] = N × R × ((E[low, mean, high] ÷ 1,000) × G + B[low, mean, high])`
+
+`water[low, mean, high] = N × R × (A[low, mean, high] ÷ 1,000)`
+
+This preserves the existing EcoLogits water basis. For image, video, and coding entries, the same `R` multiplies their own resulting energy, carbon, and water values once only.
+
+### Image generation
+
+With image count `N`, `E_image = 2.907 Wh/image` is Luccioni et al.'s own published mean across their eight tested Stable-Diffusion-family models (Table 2: 2.907 kWh per 1,000 inferences). The paper does not publish an averaged carbon figure — only per-model extremes (stable-diffusion-xl-base-1.0, the most carbon-intensive model tested, at 1,594 g CO<sub>2</sub>e per 1,000 inferences under their own AWS us-west-2 grid assumption; the least carbon-intensive model at roughly 100 g per 1,000). Rather than pairing an averaged energy figure with one model's worst-case carbon figure, the calculator derives image carbon the same way it derives video carbon: from energy, using the selected location's grid factor `G`.
+
+`energy = N × R × E_image`
+
+`carbon = (energy ÷ 1,000) × G`
+
+`water = (energy ÷ 1,000) × W`
+
+Carbon is therefore the calculator's own derivation (average energy × selected `G`), not a number Luccioni et al. publish directly — label it as derived, alongside the existing derived-water label.
+
+### Video generation
+
+With clip count `N` and entered duration `T` seconds, all clips use the fixed 720p reference resolution. The source range is 19.8–43.4 Wh for an 8-second clip; `P = 1.09` is Google's PUE and `E_mean = 30.8 Wh`.
+
+`energy[low, high] = N × R × (T ÷ 8) × [19.8, 43.4] × P`
+
+`carbon[low, high] = (energy[low, high] ÷ 1,000) × G`
+
+`water = (N × R × (T ÷ 8) × E_mean × P ÷ 1,000) × W`
+
+The `T ÷ 8` term is the calculator's linear-duration assumption, not a finding from the source paper. There is no resolution term or control.
+
+### Coding-project sessions
+
+For a session with `L` entered lines of code:
+
+`estimated tokens = L × 10 ÷ 0.15`
+
+Select or interpolate the existing EcoLogits per-token coding/agent basis as defined in the foundation checkpoint, then apply the session's `R` once. If the resolved session basis is `E_session` Wh, `B_session` g embodied carbon, and `A_session` mL water:
+
+`session energy = R × E_session`
+
+`session carbon = R × ((E_session ÷ 1,000) × G + B_session)`
+
+`session water = R × (A_session ÷ 1,000)`
+
+`project total (each metric) = sum of all valid session values for that metric`
+
+The project total never enters daily or annual AI totals. Its anchors are `100,000 × 0.15 ÷ 10 = 1,500` lines and `592,000 × 0.15 ÷ 10 = 8,880` lines (displayed as approximately 8,900).
+
+### Digital-life activities and router
+
+For an activity with daily hours `H` and energy factor `e` kWh/hour:
+
+`daily energy = H × e`
+
+`daily carbon = H × c` when the source publishes carbon directly (streaming only); otherwise `daily energy × G` (video calls, gaming, social media — none of these sources publish a carbon figure, so carbon is derived from energy using the selected location's grid factor, the same treatment used for image and video carbon)
+
+`daily water = daily energy × W`
+
+`annual value (each metric) = daily value × Y`
+
+Locked constants: `e_streaming = 0.077 kWh/hour`, `c_streaming = 36 g/hour` (IEA — the only digital-life activity with a directly published carbon figure); `e_video-call = 0.049 kWh/hour` (Mytton; carbon is grid-derived, since Mytton publishes energy only).
+
+Gaming uses a low–high range rather than a single point, reflecting the "Hot Games" paper's console-versus-PC split rather than inventing a blended average: `P_game[low, high] = [160, 305]` watts (console to desktop PC; mobile gaming is excluded, matching the source's own exclusion). `e_gaming[low, high] = P_game[low, high] ÷ 1,000 kWh/hour`; `daily energy[low, high] = H × e_gaming[low, high]`; carbon and water are each grid-/NREL-derived from that same low/high energy pair.
+
+Social media uses `M_social = 15.81` mAh/hour (Greenspector's measured TikTok figure — one app, one 2021 Android device, not a social-media-wide average) and `V_social = 3.7` V (standard nominal Li-ion phone battery voltage): `e_social = (M_social × V_social) ÷ 1,000,000 kWh/hour` ≈ `0.0000585 kWh/hour`. Carbon and water are grid-/NREL-derived from that energy value, same as the other non-streaming activities.
+
+For router wattage `P_router` (default 6.5 W):
+
+`daily energy = P_router × 24 ÷ 1,000`
+
+`daily carbon = daily energy × G`
+
+`daily water = daily energy × W`
+
+`annual value (each metric) = daily value × Y`
+
+The combined digital-life activity total is the sum of streaming, video calls, gaming, and social media only; the router is always shown separately. Combined AI totals sum eligible text, image, and video entries only; coding sessions remain project-scope.
 
 ## Checklist
 
@@ -26,17 +122,75 @@ Replace or expand the implementation placeholders below with tasks specific to t
 
 ### Approval gates
 
-- [ ] User has reviewed, verified, and approved the research claims and selected features
-- [ ] User has reviewed and approved the specification
-- [ ] User has reviewed and approved the implementation approach and task sequence
+- [x] User has reviewed, verified, and approved the research claims and selected features
+- [x] User has reviewed and approved the specification
+- [x] User has reviewed and approved the implementation approach and task sequence
 
 ### Implementation
 
-- [ ] Replace these placeholders with concrete tasks for each feature and supporting change
-- [ ] Implement the tasks in meaningful checkpoints, keeping the plan and specification aligned with approved changes
+- [ ] **Foundation:** Inspect the current row model, calculation helpers, render functions, URL hash format, reset flow, report generator, methodology, and styles. Define one backward-compatible state shape for typed entries and validation; preserve existing text rows and saved links where practical.
+  - [ ] Map the current text-row data flow from input through calculation, rendering, reset, report, and URL hash.
+  - [ ] Define shared entry fields, base units, min/max representation, and validation rules for all new input types.
+  - [ ] Add reusable numeric parsing and formatting helpers without changing existing text-row results.
+  - [ ] Establish a fixed calculation-fixture format for later hand checks.
+- [ ] **Shared retries:** Add a per-entry retry/regeneration multiplier, default 1 and constrained to values of 1 or more, to text, image, video, and coding entries. Apply it only to that entry's energy, carbon, and water before totals; add its no-average-evidence explanation.
+  - [ ] Add the multiplier to the shared entry state and defaults.
+  - [ ] Render a clearly labeled multiplier control for each applicable entry type.
+  - [ ] Apply it once, at entry level, before the entry contributes to a subtotal or total.
+  - [ ] Prevent values below 1 and document that values above 1 are user estimates, not a research average.
+- [ ] **Image and video generation:** Add image-output and video-output entries with clear units and incomplete/negative-input prevention. Implement the approved Stable-Diffusion-family proxy point estimate for image energy/carbon and derived water, plus the Veo 3.1 video min–max calculation for output count and duration, with a fixed 720p reference resolution. Render their contribution to combined AI totals without disguising image as a range or video as a point estimate.
+  - [ ] Add controls to create, edit, and remove image and video entries.
+  - [ ] Implement the image count calculation using the approved Luccioni proxy and NREL-derived water factor.
+  - [ ] Implement video min/max calculations using the Sustainable AI Group's Veo 3.1 8-second/720p reference range, multiplied by output count and `duration ÷ 8`, then Google's 1.09 PUE. Do not add a resolution control; use the NREL factor for visibly labeled derived water.
+  - [ ] Add row-level and combined-AI displays with unambiguous units and point-versus-range wording.
+  - [ ] Add plain-language source, proxy, derived-water, provider-representativeness, and peer-review limitation notes.
+- [ ] **Coding-project builder:** Replace the fixed coding/agent-session use case with addable, editable, removable lines-of-code session entries. Convert lines to tokens using the approved rough conversion, apply EcoLogits calculations and per-entry retries, render each session and a distinct project total, and show the two qualified reference anchors. Keep this project total outside daily/yearly AI totals.
+  - [ ] Add a dedicated project builder with create, edit, remove, and empty-state behavior for separate sessions.
+  - [ ] Convert lines of code to tokens with `lines × 10 ÷ 15%` and validate non-negative, complete entries.
+  - [ ] Calculate each session with the existing EcoLogits per-token basis and its retry multiplier.
+  - [ ] Render session-level energy, carbon, and water plus one distinct project total.
+  - [ ] Make the rough lines-to-token conversion and EcoLogits-only footprint basis inspectable in plain language; do not use Couch's separate energy method.
+  - [ ] Add the approximately 1,500-line fixed benchmark and approximately 8,900-line n=1 reference anchor with their required limitations.
+  - [ ] Add clearly labeled project-scope carbon and water values to the comparison graph without converting them to activity hours or daily use.
+- [ ] **Digital-life activities:** Add independently adjustable daily-hour controls for streaming, video calls, gaming, and social media. Calculate each energy/carbon/derived-water subtotal and their combined digital-life total, with yearly framing; preserve the stated sources, 1:1 video-call assumption, and confidence limitations.
+  - [ ] Add four independent daily-hour inputs with zero as the empty-use baseline and non-negative validation.
+  - [ ] Implement the locked energy factors for streaming, video calls, gaming (160–305 W range), and the project-derived social-media estimate (15.81 mAh/hour × 3.7 V).
+  - [ ] Implement carbon: streaming uses IEA's directly published figure; video-call, gaming, and social-media carbon are each grid-derived from energy via the selected-location factor `G`.
+  - [ ] Derive water consistently with the approved NREL electricity-to-water factor.
+  - [ ] Render per-activity daily/yearly energy, carbon, and water values plus a combined digital-life activity total; gaming renders as a min–max range, the other three as single point estimates.
+  - [ ] Show all four activities alongside the existing comparison values while retaining their separate digital-life category and total.
+  - [ ] Add inspectable, plain-language sources and limitations, including streaming's dated baseline, the 1:1 video-call undercount, gaming hardware assumptions, and the social-media derivation.
+- [ ] **Router baseline:** Add the adjustable 6.5 W, 24-hours-per-day router/gateway baseline with daily/yearly energy, carbon, and derived water. Keep it separate from both AI-use and combined digital-life activity totals, with the current-EU-allowance limitation.
+  - [ ] Add the wattage control with a default of 6.5 W, clear units, and non-negative validation.
+  - [ ] Calculate electricity at 24 hours per day, then calculate carbon and derived water.
+  - [ ] Render distinct daily/yearly router values that do not respond to activity-hour changes.
+  - [ ] Add source rationale and plain-language notes that it is an always-on baseline, not an activity-specific cost or a U.S. field measurement.
+- [ ] **Outputs and evidence:** Update comparison bars to include the new digital-life values and clearly labeled project-scope carbon/water values. Extend the generated report, visible methodology, citations, plain-language source explanations, proxy/derived labels, and uncertainty notes for every new feature.
+  - [ ] Decide and implement the comparison-bar grouping and labels for AI, digital-life, router, and project-scope values.
+  - [ ] Update metric formatting and totals so energy, carbon, water, single estimates, and min–max ranges remain distinguishable.
+  - [ ] Add all approved sources and calculation explanations to the methodology section.
+  - [ ] Extend the personalized report with the same inputs, totals, citations, and limitations shown in the calculator.
+  - [ ] Check every numerical or factual claim has a working citation or is labeled as the calculator's own derivation.
+- [ ] **State and interaction completion:** Update reset, share links, input event handling, accessible labels/live updates, and responsive styles for all approved controls. Confirm removing or changing an entry affects only its associated totals.
+  - [ ] Extend URL hash read/write behavior for new fields and safely ignore malformed saved values.
+  - [ ] Extend reset behavior to restore every approved default without affecting unrelated existing controls.
+  - [ ] Connect input events to the smallest necessary re-render and total updates.
+  - [ ] Add accessible names, live-result announcements where appropriate, keyboard-safe controls, and responsive layouts.
+  - [ ] Check add, edit, remove, reset, and share interactions across all entry types.
+- [ ] **Optional feature — pie chart:** After the core features pass verification, add an accessible chart that switches between carbon and water and includes only new AI entries, digital-life activities, router baseline, and explicitly selected coding sessions. Provide values and a text alternative; selected sessions count once for the chosen day and never alter the project total.
+  - [ ] Confirm the five core features have passed their calculation and interface checks before starting this task.
+  - [ ] Define the chart data from new inputs only, excluding legacy lifestyle-footprint controls.
+  - [ ] Add carbon/water switching and text values equivalent to every visual slice.
+  - [ ] Add controls to select and remove individual coding sessions from the one-day chart contribution.
+  - [ ] Verify selection changes only the chart and never the coding-project total or unselected-session state.
+- [ ] Implement in the checkpoints above, updating this plan and the specification only when the approved intended result changes.
 
 ### Verification
 
+- [ ] Run fixed, hand-checkable calculation cases for every entry type, multiplier, video duration scaling at the fixed 720p reference resolution, lines-to-token conversion, each digital-life activity, router wattage, daily/yearly totals, and project-total separation; retain the expected values and observed results.
+- [ ] Check validation: negative and incomplete values cannot enter totals; retry values below 1 are rejected; changing/removing one entry leaves unrelated entries unchanged.
+- [ ] Check interface behavior manually at desktop and narrow widths: add/edit/remove flows, metric switching, source/limitation visibility, point-versus-range wording, project-scope labels, reset, and share-link round trips.
+- [ ] Run `npm run build` from `project_1_executables` and resolve build errors before requesting user verification.
 - [ ] User has checked feature behavior and calculations against the specification and sources independently of the agent
 - [ ] User has confirmed factual and numerical claims have working citations and communicate important limitations or uncertainty
 - [ ] User has confirmed the project runs locally, serves all three reference profiles, and matches the specification
@@ -49,6 +203,10 @@ Replace or expand the implementation placeholders below with tasks specific to t
 ## Revisions
 
 Record material changes to the approach, sequence, or checklist and explain why they were made.
+
+- 2026-09-21: The user directed that the stretch pie chart be retained as an optional feature. It is sequenced after core-feature verification so it cannot obscure or delay the approved scope.
+- 2026-09-22: Feature 1 is updated to remove video-resolution controls. The implementation will accept duration only and scale the 8-second Veo 3.1 reference estimate linearly, with that unsupported extrapolation labeled as the calculator's assumption. This replaces the obsolete EcoLogits/WUE/duration-and-resolution task wording.
+- 2026-09-22: Locked the previously open calculation constants flagged in this plan. Verified directly against the Luccioni et al. paper that its 2.907 Wh/image figure is a genuine published average, but its 1,594 g CO2eq/1,000-inference figure is the single most carbon-intensive tested model, not an average — image carbon is now derived from average energy via the selected-location grid factor `G` (matching video/text treatment) instead of using that non-representative number. Video-call carbon is now explicitly grid-derived (Mytton publishes energy only). Gaming now uses a 160–305 W console-to-PC range instead of an unstated single wattage. Social media now uses Greenspector's measured TikTok figure (15.81 mAh/hour) with a standard 3.7 V nominal Li-ion voltage.
 
 ## Commands
 
