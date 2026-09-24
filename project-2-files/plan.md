@@ -18,7 +18,7 @@ Guide planning one stage at a time. Surface dependencies, risks, and verificatio
 
 ## Approach
 
-Extend the existing single-page Astro calculator in small, verifiable checkpoints. First, consolidate the client-side state and calculation helpers so text, image, video, and coding-project entries can share validation, retry multipliers, energy/carbon/water calculations, reset, and URL-sharing behavior. Preserve the existing text-row behavior while adding the new entry types.
+Extend the existing single-page Astro calculator in small, verifiable checkpoints. First, consolidate the client-side state and calculation helpers so text, image, video, and coding-project entries can share validation, energy/carbon/water calculations, reset, and URL-sharing behavior (retry multipliers are shared by text, image, and video only — see the 2026-09-23 revision to Feature 5). Preserve the existing text-row behavior while adding the new entry types.
 
 Build professional-AI features before digital-life comparisons: add retries, then image/video entries and their different point-versus-range displays, then the separate coding-project builder. Add digital-life hours and the always-on router baseline as separate comparison data; neither changes AI-use totals, and the router remains outside the digital-life combined activity total. Finish each feature's visible source, method, and limitation copy before treating it as complete.
 
@@ -74,13 +74,13 @@ For a session with `L` entered lines of code:
 
 `estimated tokens = L × 10 ÷ 0.15`
 
-Select or interpolate the existing EcoLogits per-token coding/agent basis as defined in the foundation checkpoint, then apply the session's `R` once. If the resolved session basis is `E_session` Wh, `B_session` g embodied carbon, and `A_session` mL water:
+Select or interpolate the existing EcoLogits per-token coding/agent basis as defined in the foundation checkpoint. No retry multiplier applies here (2026-09-23 revision to Feature 5 — see spec.md): a session's line count already describes one full run, and a repeated run rarely reproduces the same amount of code. If the resolved session basis is `E_session` Wh, `B_session` g embodied carbon, and `A_session` mL water:
 
-`session energy = R × E_session`
+`session energy = E_session`
 
-`session carbon = R × ((E_session ÷ 1,000) × G + B_session)`
+`session carbon = (E_session ÷ 1,000) × G + B_session`
 
-`session water = R × (A_session ÷ 1,000)`
+`session water = A_session ÷ 1,000`
 
 `project total (each metric) = sum of all valid session values for that metric`
 
@@ -133,25 +133,26 @@ Replace or expand the implementation placeholders below with tasks specific to t
   - [ ] Define shared entry fields, base units, min/max representation, and validation rules for all new input types.
   - [ ] Add reusable numeric parsing and formatting helpers without changing existing text-row results.
   - [ ] Establish a fixed calculation-fixture format for later hand checks.
-- [ ] **Shared retries:** Add a per-entry retry/regeneration multiplier, default 1 and constrained to values of 1 or more, to text, image, video, and coding entries. Apply it only to that entry's energy, carbon, and water before totals; add its no-average-evidence explanation.
-  - [ ] Add the multiplier to the shared entry state and defaults.
-  - [ ] Render a clearly labeled multiplier control for each applicable entry type.
-  - [ ] Apply it once, at entry level, before the entry contributes to a subtotal or total.
-  - [ ] Prevent values below 1 and document that values above 1 are user estimates, not a research average.
+- [x] **Shared retries:** Add a per-entry retry/regeneration multiplier, default 1 and constrained to values of 1 or more, to text, image, and video entries (coding entries excluded — 2026-09-23 revision to Feature 5). Apply it only to that entry's energy, carbon, and water before totals; add its no-average-evidence explanation.
+  - [x] Add the multiplier to the shared entry state and defaults. (Done for text rows; image/video/coding entries will get `retry: 1` in their own checkpoints below, per the plan's own build order.)
+  - [x] Render a clearly labeled multiplier control for each applicable entry type. (Text rows only so far — a "×" input next to the existing counter.)
+  - [x] Apply it once, at entry level, before the entry contributes to a subtotal or total. (Threaded through `aiDailyTriple`, `aiDailyEnergy`, `dailyWords`, `dailyCodeLines`, `updateRowMeta`, and the report generator.)
+  - [x] Prevent values below 1 and document that values above 1 are user estimates, not a research average. (`clampInt` floors at 1; hint text under the usage rows states no research gives a typical retry rate.)
 - [ ] **Image and video generation:** Add image-output and video-output entries with clear units and incomplete/negative-input prevention. Implement the approved Stable-Diffusion-family proxy point estimate for image energy/carbon and derived water, plus the Veo 3.1 video min–max calculation for output count and duration, with a fixed 720p reference resolution. Render their contribution to combined AI totals without disguising image as a range or video as a point estimate.
   - [ ] Add controls to create, edit, and remove image and video entries.
   - [ ] Implement the image count calculation using the approved Luccioni proxy and NREL-derived water factor.
   - [ ] Implement video min/max calculations using the Sustainable AI Group's Veo 3.1 8-second/720p reference range, multiplied by output count and `duration ÷ 8`, then Google's 1.09 PUE. Do not add a resolution control; use the NREL factor for visibly labeled derived water.
   - [ ] Add row-level and combined-AI displays with unambiguous units and point-versus-range wording.
   - [ ] Add plain-language source, proxy, derived-water, provider-representativeness, and peer-review limitation notes.
-- [ ] **Coding-project builder:** Replace the fixed coding/agent-session use case with addable, editable, removable lines-of-code session entries. Convert lines to tokens using the approved rough conversion, apply EcoLogits calculations and per-entry retries, render each session and a distinct project total, and show the two qualified reference anchors. Keep this project total outside daily/yearly AI totals.
-  - [ ] Add a dedicated project builder with create, edit, remove, and empty-state behavior for separate sessions.
-  - [ ] Convert lines of code to tokens with `lines × 10 ÷ 15%` and validate non-negative, complete entries.
-  - [ ] Calculate each session with the existing EcoLogits per-token basis and its retry multiplier.
-  - [ ] Render session-level energy, carbon, and water plus one distinct project total.
-  - [ ] Make the rough lines-to-token conversion and EcoLogits-only footprint basis inspectable in plain language; do not use Couch's separate energy method.
-  - [ ] Add the approximately 1,500-line fixed benchmark and approximately 8,900-line n=1 reference anchor with their required limitations.
-  - [ ] Add clearly labeled project-scope carbon and water values to the comparison graph without converting them to activity hours or daily use.
+- [x] **Coding-project builder:** Replace the fixed coding/agent-session use case with addable, editable, removable lines-of-code session entries. Convert lines to tokens using the approved rough conversion, apply EcoLogits calculations and per-entry retries, render each session and a distinct project total, and show the two qualified reference anchors. Keep this project total outside daily/yearly AI totals.
+  - [x] Add a dedicated project builder with create, edit, remove, and empty-state behavior for separate sessions. (Lives in its own "Coding agent — project sessions" section, moved out of the shared usage-row list entirely; `state.codingSessions` is a separate array from `state.rows`.)
+  - [x] Convert lines of code to tokens with `lines × 10 ÷ 15%` and validate non-negative, complete entries. (`tokensForLines`; `clampInt` floors at 0, ceilings at 100,000 lines as an input-sanity bound.)
+  - [x] Calculate each session with the existing EcoLogits per-token basis and its retry multiplier. (`codingBasis` derives a linear per-token rate from each model's own `agent` bucket ÷ 100,000 tokens; `codingSessionValues` applies retry once. Verified: at exactly 1,500 lines it reproduces the `agent` bucket's own figures exactly; scaling to 8,880 lines and retry=3 both matched hand calculation.)
+  - [x] Render session-level energy, carbon, and water plus one distinct project total. (Per-session meta line + a `#aipf-project-total` callout summing all sessions.)
+  - [x] Make the rough lines-to-token conversion and EcoLogits-only footprint basis inspectable in plain language; do not use Couch's separate energy method. (Hint text under the section spells out the conversion and explicitly disclaims Couch's own energy methodology.)
+  - [x] Add the approximately 1,500-line fixed benchmark and approximately 8,900-line n=1 reference anchor with their required limitations. (Same hint text; both anchors labeled as non-typical.)
+  - [~] Add clearly labeled project-scope carbon and water values to the comparison graph without converting them to activity hours or daily use. (Implemented as a standalone, clearly-labeled callout rather than inserting into the shared daily/annual bar charts — mixing a whole-project total onto axes calibrated to per-day items like "a cup of coffee" seemed likely to distort those charts' scale. Literal integration into the shared comparison-bar component is deferred to the "Outputs and evidence" checkpoint below, alongside the same graph work for image/video/digital-life/router. User should confirm this call.)
+  - Deferred to later checkpoints (consistent with how retries only extended the *existing* URL/report plumbing rather than building new plumbing from scratch): URL-sharing for `codingSessions` (→ "State and interaction completion") and inclusion in the exported cited report (→ "Outputs and evidence").
 - [ ] **Digital-life activities:** Add independently adjustable daily-hour controls for streaming, video calls, gaming, and social media. Calculate each energy/carbon/derived-water subtotal and their combined digital-life total, with yearly framing; preserve the stated sources, 1:1 video-call assumption, and confidence limitations.
   - [ ] Add four independent daily-hour inputs with zero as the empty-use baseline and non-negative validation.
   - [ ] Implement the locked energy factors for streaming, video calls, gaming (160–305 W range), and the project-derived social-media estimate (15.81 mAh/hour × 3.7 V).
@@ -207,6 +208,9 @@ Record material changes to the approach, sequence, or checklist and explain why 
 - 2026-09-21: The user directed that the stretch pie chart be retained as an optional feature. It is sequenced after core-feature verification so it cannot obscure or delay the approved scope.
 - 2026-09-22: Feature 1 is updated to remove video-resolution controls. The implementation will accept duration only and scale the 8-second Veo 3.1 reference estimate linearly, with that unsupported extrapolation labeled as the calculator's assumption. This replaces the obsolete EcoLogits/WUE/duration-and-resolution task wording.
 - 2026-09-22: Locked the previously open calculation constants flagged in this plan. Verified directly against the Luccioni et al. paper that its 2.907 Wh/image figure is a genuine published average, but its 1,594 g CO2eq/1,000-inference figure is the single most carbon-intensive tested model, not an average — image carbon is now derived from average energy via the selected-location grid factor `G` (matching video/text treatment) instead of using that non-representative number. Video-call carbon is now explicitly grid-derived (Mytton publishes energy only). Gaming now uses a 160–305 W console-to-PC range instead of an unstated single wattage. Social media now uses Greenspector's measured TikTok figure (15.81 mAh/hour) with a standard 3.7 V nominal Li-ion voltage.
+- 2026-09-23: At the user's direction, split the single usage-row list into labeled sub-sections instead of mixing every entry type in one table: "Chatbot & text" (existing text rows, now excluding the agent/coding size) and "Coding agent" (rows fixed to the agent benchmark, with a model picker but no output-length dropdown since there is only one). Both still read/write the same `state.rows` array, routed by the existing `isCodeRow()` check, so URL links, retries, and totals are unaffected. A third "Media generation" section will be added when Feature 1 (image/video) is built next. Interface/route change only — no calculation or requirement changes.
+- 2026-09-23: At the user's direction, built the Coding-project builder (Feature 3) into the "Coding agent" section immediately after the reorg above, ahead of Feature 1 (image/video) in the plan's stated build order. Coding entries moved out of `state.rows` entirely into a new `state.codingSessions` array (`{uid, model, lines, retry}`), since a lines-of-code session is fundamentally not the same shape as a daily prompt count. `isCodeRow`, `linesForSize`, and `dailyCodeLines` were removed as dead code once no `state.rows` entry can be agent-sized anymore. Deferred to later checkpoints: URL-sharing for coding sessions and their inclusion in the exported report (see the Coding-project-builder checklist above for why).
+- 2026-09-23: At the user's direction, removed the retry multiplier from coding-project sessions (`codingSessions` entries no longer carry a `retry` field or control). Rationale: a session's lines-of-code figure already describes one full run, and re-running an entire agent session rarely reproduces the same amount of code — unlike regenerating a short text, image, or video output, where the retry multiplier still applies. An employee who re-ran a whole session represents that as its own separate session instead. This revises the approved Feature 5 spec (see spec.md's 2026-09-23 entry); **Feature 5 needs updated user approval.**
 
 ## Commands
 

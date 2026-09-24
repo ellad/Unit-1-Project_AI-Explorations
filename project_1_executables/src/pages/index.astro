@@ -176,18 +176,36 @@ const structuredData = [
     <div class="aipf-tool">
       <div class="aipf-in" aria-label="Your daily AI usage">
         <div class="aipf-in-head"><span>Your AI use</span><span class="aipf-in-sub">per day</span></div>
-        <div class="aipf-rows-head" aria-hidden="true">
-          <span>Model</span><span>Typical output</span><span>Prompts/day</span><span></span>
+
+        <div class="aipf-usage-section" aria-label="Chatbot and text prompts">
+          <h3 class="aipf-usage-h">Chatbot &amp; text</h3>
+          <div class="aipf-rows-head" aria-hidden="true">
+            <span>Model</span><span>Typical output</span><span>Prompts/day</span><span>Retries</span><span></span>
+          </div>
+          <div class="aipf-rows" id="aipf-rows"></div>
+          <button type="button" class="aipf-addrow" id="aipf-addrow">+ add another</button>
+          <p class="aipf-hint">"Typical output" is how long each reply is.</p>
         </div>
-        <div class="aipf-rows" id="aipf-rows"></div>
-        <button type="button" class="aipf-addrow" id="aipf-addrow">+ add another</button>
+
+        <div class="aipf-usage-section" aria-label="Coding agent project sessions">
+          <h3 class="aipf-usage-h">Coding agent — project sessions</h3>
+          <div class="aipf-rows-head aipf-rows-head--code" aria-hidden="true">
+            <span>Model</span><span>Lines of code</span><span></span>
+          </div>
+          <div class="aipf-rows" id="aipf-rows-code"></div>
+          <button type="button" class="aipf-addrow" id="aipf-addrow-code">+ add a session</button>
+          <p class="aipf-project-total" id="aipf-project-total" aria-live="polite"></p>
+          <p class="aipf-hint">A "coding / agent session" means one full run of an AI coding assistant that writes and edits code across many steps — you tell it roughly how many lines of code the session produced, and it estimates the rest. Lines convert to an estimated token count (<code>lines × 10 ÷ 15%</code>, since only about 15% of a session's output tokens are final code — the rest is the model's own reasoning, tool calls, and file exploration), then that token count is costed at the same per-token energy/carbon/water rate as EcoLogits' own 100,000-token "assist application development" benchmark for the chosen model. This is a rough, linearly-scaled estimate, not a separate study of sessions at every length — and it does not use Couch's separate self-reported energy method. For scale: about 1,500 lines matches that fixed 100,000-token EcoLogits benchmark exactly (a fixed content-length benchmark, not typical-session data), and about 8,900 lines matches one developer's self-logged ~592,000-token session (Couch, n=1) — one person's data, not a representative average.</p>
+          <p class="aipf-hint">Each session is a one-time project cost, not a recurring daily use — that is why this section has no "per day" framing. The project total below sums every session and stays separate from your combined AI-use total and the day/year figures elsewhere on this page.</p>
+          <p class="aipf-hint">Sessions have no retry multiplier, unlike the entries below. A session's lines-of-code figure already describes one full run, and re-running an entire agent session rarely reproduces the same amount of code — so a repeated run is better represented as its own separate session, with its own line count, than as a flat multiple of this one.</p>
+        </div>
+
         <p class="aipf-running" id="aipf-running" aria-live="polite"></p>
         <div class="aipf-writes">
           <p class="aipf-writes-h">What it writes</p>
           <p class="aipf-words" id="aipf-words" aria-live="polite"></p>
         </div>
-        <p class="aipf-hint">"Typical output" is how long each reply is. A "coding / agent session" means one full run of an AI coding assistant that writes and edits code across many steps. It uses EcoLogits' 100,000-token "assist application development" benchmark (much of it the model's own reasoning and tool calls, not final code).</p>
-        <p class="aipf-hint">For context, the finished code for this page is about 29,000 tokens, and it took roughly 250,000 tokens of Opus 4.8 output to build it through all the drafts. About the energy of running a dishwasher, or playing a PS5 for 5-6 hours.</p>
+        <p class="aipf-hint">Each chatbot/text row's "×" field counts retries or regenerations of that same prompt. It defaults to 1 (the original output only) — no research gives a typical retry rate, so any higher number is your own estimate of your behavior, not a study finding.</p>
         <p class="aipf-tools">
           <button type="button" class="aipf-link" id="aipf-reset">Reset</button>
           <span class="aipf-tools-sep">·</span>
@@ -675,11 +693,41 @@ const structuredData = [
     const DAYS = 365;
 
     let uidSeq = 1;
-    const state = { rows: [], metric: 'carbon', loc: 'us', home: 'med', drive: 'davg', diet: 'avg', fly: 'some', headcount: 300 };
+    // Shared state shape (Project 2 foundation checkpoint). `rows` is the
+    // existing text-AI usage table; `images`/`videos`/`codingSessions` are new
+    // AI-use entry types added alongside it; `activities`/`routerWatts` are the
+    // separate digital-life and router comparisons (never AI-use totals).
+    // Each AI-use entry type (rows, images, videos, codingSessions) carries its
+    // own `retry` multiplier, added in the next checkpoint.
+    const state = {
+      rows: [],
+      images: [],
+      videos: [],
+      codingSessions: [],
+      activities: { streaming: 0, videoCall: 0, gaming: 0, social: 0 },
+      routerWatts: 6.5,
+      metric: 'carbon', loc: 'us', home: 'med', drive: 'davg', diet: 'avg', fly: 'some', headcount: 300,
+    };
 
     let root = null;
     const getModel = (id) => MODELS.find((m) => m.id === id) || MODELS[0];
     const getLoc = () => LOCATIONS.find((x) => x.id === state.loc) || LOCATIONS[0];
+
+    // ---- Shared numeric parsing (Project 2 foundation checkpoint) ----
+    // Clamp a possibly-invalid numeric string to an integer in [min, max],
+    // falling back to `fallback` (not 0) so a cleared field doesn't silently
+    // zero out — matches the existing stepper's own clamping behavior.
+    function clampInt(raw, min, max, fallback) {
+      const n = parseInt(String(raw).replace(/[^0-9]/g, ''), 10);
+      if (!Number.isFinite(n)) return fallback;
+      return Math.max(min, Math.min(max, n));
+    }
+    // Same, but for decimal inputs (durations, wattages, hours).
+    function clampFloat(raw, min, max, fallback) {
+      const n = parseFloat(raw);
+      if (!Number.isFinite(n)) return fallback;
+      return Math.max(min, Math.min(max, n));
+    }
 
     // ---- Formatting ----
     function fmtNum(n) {
@@ -745,12 +793,13 @@ const structuredData = [
       for (const r of state.rows) {
         if (!r.count) continue;
         const t = perPromptTriple(getModel(r.model), r.size, metric);
-        a += r.count * t[0]; b += r.count * t[1]; c += r.count * t[2];
+        const n = r.count * (r.retry || 1);
+        a += n * t[0]; b += n * t[1]; c += n * t[2];
       }
       return [a, b, c];
     }
     const aiDaily = (metric) => aiDailyTriple(metric)[0];
-    function aiDailyEnergy() { let t = 0; for (const r of state.rows) if (r.count) t += r.count * getModel(r.model).sizes[r.size].wh; return t; }
+    function aiDailyEnergy() { let t = 0; for (const r of state.rows) if (r.count) t += r.count * (r.retry || 1) * getModel(r.model).sizes[r.size].wh; return t; }
     function dailyFootprint(metric) {
       const loc = getLoc();
       const home = HOMES.find((x) => x.id === state.home) || HOMES[1];
@@ -762,21 +811,50 @@ const structuredData = [
     }
     function itemBase(item, metric) { return metric === 'carbon' ? item.c * 1000 : item.w * GAL_TO_L; }
 
-    function isCodeRow(row) {
-      if (row.size !== 'agent') return false;
-      const o = SIZE_LABEL_OVERRIDES[row.model];
-      return !(o && o.agent);
-    }
-    function linesForSize(s) { return Math.round((s.w / TOKENS_PER_WORD) * CODE_FRACTION / TOKENS_PER_LINE); }
     function dailyWords() {
       let n = 0;
-      for (const r of state.rows) if (r.count && !isCodeRow(r)) n += r.count * (SIZES.find((s) => s.id === r.size) || { w: 0 }).w;
+      for (const r of state.rows) if (r.count) n += r.count * (r.retry || 1) * (SIZES.find((s) => s.id === r.size) || { w: 0 }).w;
       return n;
     }
-    function dailyCodeLines() {
-      let n = 0;
-      for (const r of state.rows) if (r.count && isCodeRow(r)) { const s = SIZES.find((x) => x.id === r.size); if (s) n += r.count * linesForSize(s); }
-      return n;
+
+    // ---- Coding-project sessions (Feature 3) ----
+    // Unlike every other entry, a coding session is not a daily quantity: it is
+    // one discrete project session. Sessions sum into a separate project total
+    // that never joins the daily/annual AI-use totals above (plan.md's explicit
+    // rule, so a project's one-time cost is never mistaken for a recurring one).
+    const REF_TOKENS = 100000;      // EcoLogits' own coding/agent benchmark, in tokens
+    const REF_LINES_STANDARD = 1500; // that same benchmark, in lines (100000*0.15/10)
+    const REF_LINES_HEAVY = 8880;    // Couch's ~592,000-token self-logged session (n=1); shown as ~8,900
+    const MAX_SESSION_LINES = 100000; // input-sanity ceiling only, not a research bound
+    function tokensForLines(lines) { return (lines * TOKENS_PER_LINE) / CODE_FRACTION; }
+    // Per-token energy/embodied-carbon/water rate, linearly derived from the
+    // model's own 100,000-token 'agent' bucket — the "existing EcoLogits
+    // per-token coding/agent basis" the plan calls for reusing.
+    function codingBasis(model) {
+      const a = model.sizes.agent;
+      return { wh: a.wh / REF_TOKENS, emb: a.emb / REF_TOKENS, ml: a.ml / REF_TOKENS };
+    }
+    // Point estimate only (no low/high range) — plan.md's coding formula uses a
+    // single scaled value, unlike the ranged text/image/video calculations.
+    // No retry multiplier here (unlike every other entry type, per Feature 5's
+    // revision below): a session's lines-of-code figure already describes one
+    // full run, and a repeated run rarely reproduces the same line count, so
+    // representing a re-run as another distinct session (its own line count)
+    // is more honest than multiplying this one's footprint by a flat factor.
+    function codingSessionValues(session) {
+      const basis = codingBasis(getModel(session.model));
+      const tokens = tokensForLines(session.lines || 0);
+      const wh = basis.wh * tokens, emb = basis.emb * tokens, ml = basis.ml * tokens;
+      return { wh, carbon: (wh / 1000) * getLoc().grid + emb, water: ml / 1000 };
+    }
+    function codingProjectTotals() {
+      let wh = 0, carbon = 0, water = 0;
+      for (const s of state.codingSessions) {
+        if (!s.lines) continue;
+        const v = codingSessionValues(s);
+        wh += v.wh; carbon += v.carbon; water += v.water;
+      }
+      return { wh, carbon, water };
     }
     function fmtWords(n) { return n >= 1e6 ? fmtNum(n / 1e6) + ' million' : Math.round(n).toLocaleString('en-US'); }
     function fmtReadingTime(minutes) {
@@ -799,7 +877,7 @@ const structuredData = [
 
     // ---- URL state ----
     function buildShareURL() {
-      const r = state.rows.map((row) => MODELS.findIndex((m) => m.id === row.model) + '-' + SIZES.findIndex((s) => s.id === row.size) + '-' + (row.count || 0)).join('.');
+      const r = state.rows.map((row) => MODELS.findIndex((m) => m.id === row.model) + '-' + SIZES.findIndex((s) => s.id === row.size) + '-' + (row.count || 0) + '-' + (row.retry || 1)).join('.');
       const p = new URLSearchParams();
       p.set('k', state.metric); p.set('l', state.loc); p.set('h', state.home); p.set('v', state.drive); p.set('d', state.diet); p.set('f', state.fly); p.set('r', r);
       return location.origin + location.pathname + '#' + p.toString();
@@ -820,28 +898,36 @@ const structuredData = [
           const rows = [];
           for (const part of r.split('.')) {
             const a = part.split('-').map(Number);
-            if (MODELS[a[0]] && SIZES[a[1]] && a[2] >= 0) rows.push({ uid: uidSeq++, model: MODELS[a[0]].id, size: SIZES[a[1]].id, count: Math.min(100000, a[2]) });
+            // a[3] (retry) is optional so links saved before Project 2 still parse; missing or invalid -> 1.
+            // 'agent' rows no longer belong here — they live in codingSessions (not yet URL-encoded) — so skip any.
+            if (MODELS[a[0]] && SIZES[a[1]] && SIZES[a[1]].id !== 'agent' && a[2] >= 0) {
+              const retry = a.length > 3 && a[3] >= 1 ? Math.min(1000, Math.round(a[3])) : 1;
+              rows.push({ uid: uidSeq++, model: MODELS[a[0]].id, size: SIZES[a[1]].id, count: Math.min(100000, a[2]), retry });
+            }
           }
           if (rows.length) state.rows = rows;
         }
       } catch (e) { /* ignore */ }
     }
-    function setDefaultRows() { state.rows = DEFAULT_ROWS.map((r) => ({ uid: uidSeq++, model: r[0], size: r[1], count: r[2] })); }
+    function setDefaultRows() { state.rows = DEFAULT_ROWS.map((r) => ({ uid: uidSeq++, model: r[0], size: r[1], count: r[2], retry: 1 })); }
 
     // ---- Usage rows ----
-    function modelSelect(row) {
+    // onChange lets coding sessions (a separate array from state.rows) reuse
+    // this control with their own re-render instead of the chat-row default.
+    function modelSelect(row, onChange) {
       const sel = el('select', 'aipf-rsel');
       sel.setAttribute('aria-label', 'Model');
       const groups = [];
       for (const m of MODELS) { let g = groups.find((x) => x.name === m.group); if (!g) { g = { name: m.group, items: [] }; groups.push(g); } g.items.push(m); }
       for (const g of groups) { const og = document.createElement('optgroup'); og.label = g.name; for (const m of g.items) og.appendChild(option(m.id, m.name, m.id === row.model)); sel.appendChild(og); }
-      sel.addEventListener('change', () => { row.model = sel.value; renderRows(); updateOutputs(); });
+      sel.addEventListener('change', () => { row.model = sel.value; if (onChange) onChange(); else { renderRows(); updateOutputs(); } });
       return sel;
     }
     function sizeSelect(row) {
       const sel = el('select', 'aipf-rsel');
       sel.setAttribute('aria-label', 'Typical output length');
-      for (const s of SIZES) sel.appendChild(option(s.id, sizeLabel(row.model, s) + ' (' + s.words + ')', s.id === row.size));
+      // 'agent' (coding/agent session) lives in its own section below, not this dropdown.
+      for (const s of SIZES) { if (s.id === 'agent') continue; sel.appendChild(option(s.id, sizeLabel(row.model, s) + ' (' + s.words + ')', s.id === row.size)); }
       sel.addEventListener('change', () => { row.size = sel.value; updateOutputs(); });
       return sel;
     }
@@ -853,7 +939,7 @@ const structuredData = [
       const plus = el('button', 'aipf-step', '+'); plus.type = 'button'; plus.setAttribute('aria-label', 'More');
       minus.addEventListener('click', () => bump(row, input, -1));
       plus.addEventListener('click', () => bump(row, input, 1));
-      input.addEventListener('input', () => { row.count = Math.max(0, Math.min(100000, parseInt(input.value.replace(/[^0-9]/g, ''), 10) || 0)); updateOutputs(); });
+      input.addEventListener('input', () => { row.count = clampInt(input.value, 0, 100000, 0); updateOutputs(); });
       input.addEventListener('blur', () => { input.value = String(row.count || 0); });
       ctrl.appendChild(minus); ctrl.appendChild(input); ctrl.appendChild(plus);
       return ctrl;
@@ -864,7 +950,23 @@ const structuredData = [
       let next = cur + dir * step; if (dir < 0 && cur > 0 && cur <= step) next = 0;
       row.count = Math.max(0, Math.min(100000, next)); input.value = String(row.count); updateOutputs();
     }
-    function renderRows() {
+    // Retry/regeneration multiplier control (Feature 5): defaults to 1 (the
+    // original output only); clampInt's own min:1 floor rejects anything lower.
+    // onChange lets coding sessions reuse this with their own re-render.
+    function retryControl(row, onChange) {
+      const wrap = el('div', 'aipf-retry');
+      wrap.appendChild(el('span', 'aipf-retry-x', '×'));
+      const input = document.createElement('input');
+      input.type = 'text'; input.inputMode = 'numeric'; input.className = 'aipf-retry-input';
+      input.value = String(row.retry || 1);
+      input.setAttribute('aria-label', 'Retries or regenerations of this row (1 = the original output only)');
+      input.addEventListener('input', () => { row.retry = clampInt(input.value, 1, 1000, 1); if (onChange) onChange(); else { updateRowMeta(); updateOutputs(); } });
+      input.addEventListener('blur', () => { input.value = String(row.retry || 1); });
+      wrap.appendChild(input);
+      return wrap;
+    }
+    function removeRow(uid) { state.rows = state.rows.filter((x) => x.uid !== uid); renderChatRows(); updateOutputs(); }
+    function renderChatRows() {
       const wrap = root.querySelector('#aipf-rows');
       wrap.innerHTML = '';
       for (const row of state.rows) {
@@ -873,25 +975,81 @@ const structuredData = [
         r.appendChild(modelSelect(row));
         r.appendChild(sizeSelect(row));
         r.appendChild(stepper(row));
+        r.appendChild(retryControl(row));
         const rm = el('button', 'aipf-rowdel', '×'); rm.type = 'button'; rm.setAttribute('aria-label', 'Remove this row');
-        rm.addEventListener('click', () => { state.rows = state.rows.filter((x) => x.uid !== row.uid); renderRows(); updateOutputs(); });
+        rm.addEventListener('click', () => removeRow(row.uid));
         r.appendChild(rm);
         wrapEl.appendChild(r);
         wrapEl.appendChild(el('div', 'aipf-row-meta'));
         wrap.appendChild(wrapEl);
       }
-      if (!state.rows.length) wrap.appendChild(el('p', 'aipf-empty', 'No usage yet. Add a kind of use to begin.'));
+      if (!state.rows.length) wrap.appendChild(el('p', 'aipf-empty', 'No chatbot or text use yet. Add a kind of use to begin.'));
     }
+    // Lines-of-code input for one coding-project session (Feature 3): converts
+    // to an estimated token count via the documented rough conversion.
+    function linesInput(session) {
+      const wrap = el('div', 'aipf-lines');
+      const input = document.createElement('input');
+      input.type = 'text'; input.inputMode = 'numeric'; input.className = 'aipf-lines-input';
+      input.value = String(session.lines || 0);
+      input.setAttribute('aria-label', 'Lines of code produced by this session');
+      input.addEventListener('input', () => { session.lines = clampInt(input.value, 0, MAX_SESSION_LINES, 0); renderCodeMeta(); renderProjectTotal(); });
+      input.addEventListener('blur', () => { input.value = String(session.lines || 0); });
+      wrap.appendChild(input);
+      wrap.appendChild(el('span', 'aipf-lines-suffix', 'lines'));
+      return wrap;
+    }
+    function removeCodingSession(uid) { state.codingSessions = state.codingSessions.filter((x) => x.uid !== uid); renderCodeRows(); renderProjectTotal(); }
+    function renderCodeRows() {
+      const wrap = root.querySelector('#aipf-rows-code');
+      wrap.innerHTML = '';
+      for (const session of state.codingSessions) {
+        const wrapEl = el('div', 'aipf-rowwrap'); wrapEl.dataset.uid = String(session.uid);
+        const r = el('div', 'aipf-row aipf-row--code');
+        r.appendChild(modelSelect(session, () => { renderCodeRows(); renderProjectTotal(); }));
+        r.appendChild(linesInput(session));
+        const rm = el('button', 'aipf-rowdel', '×'); rm.type = 'button'; rm.setAttribute('aria-label', 'Remove this session');
+        rm.addEventListener('click', () => removeCodingSession(session.uid));
+        r.appendChild(rm);
+        wrapEl.appendChild(r);
+        wrapEl.appendChild(el('div', 'aipf-row-meta'));
+        wrap.appendChild(wrapEl);
+      }
+      if (!state.codingSessions.length) wrap.appendChild(el('p', 'aipf-empty', 'No coding sessions yet. Add one to begin.'));
+      renderCodeMeta();
+    }
+    function renderCodeMeta() {
+      for (const session of state.codingSessions) {
+        const wrapEl = root.querySelector('.aipf-rowwrap[data-uid="' + session.uid + '"] .aipf-row-meta');
+        if (!wrapEl) continue;
+        const tokens = Math.round(tokensForLines(session.lines || 0));
+        const v = codingSessionValues(session);
+        wrapEl.textContent = '≈' + tokens.toLocaleString('en-US') + ' tokens → ' + fmtCarbon(v.carbon) + ', ' + fmtWater(v.water) + ' for this session (' + fmtEnergy(v.wh) + ')';
+      }
+    }
+    function renderProjectTotal() {
+      const box = root.querySelector('#aipf-project-total');
+      if (!box) return;
+      const n = state.codingSessions.filter((s) => s.lines > 0).length;
+      if (n === 0) { box.textContent = ''; return; }
+      const t = codingProjectTotals();
+      box.innerHTML = 'Project total across <b>' + n + '</b> session' + (n === 1 ? '' : 's') + ': <b>' + fmtCarbon(t.carbon) +
+        '</b> and <b>' + fmtWater(t.water) + '</b> (' + fmtEnergy(t.wh) +
+        '). A one-time project cost, not a daily or yearly figure — it is not included in your combined AI-use totals above.';
+    }
+    function renderRows() { renderChatRows(); renderCodeRows(); }
     function updateRowMeta() {
       const total = aiDaily(state.metric);
       for (const row of state.rows) {
         const wrapEl = root.querySelector('.aipf-rowwrap[data-uid="' + row.uid + '"] .aipf-row-meta');
         if (!wrapEl) continue;
         const per = perPromptTriple(getModel(row.model), row.size, state.metric)[0];
-        const contr = (row.count || 0) * per;
+        const retry = row.retry || 1;
+        const contr = (row.count || 0) * retry * per;
         const share = total > 0 ? (contr / total) * 100 : 0;
         const shareStr = share >= 10 ? Math.round(share) : share.toFixed(1);
-        wrapEl.textContent = fmtMetric(per) + ' each, ' + fmtMetric(contr) + ' a day, ' + shareStr + '% of your AI ' + metricWord();
+        const retryNote = retry > 1 ? ' (×' + retry + ' retries)' : '';
+        wrapEl.textContent = fmtMetric(per) + ' each, ' + fmtMetric(contr) + ' a day' + retryNote + ', ' + shareStr + '% of your AI ' + metricWord();
       }
     }
     function renderLifeSelects() {
@@ -959,20 +1117,12 @@ const structuredData = [
 
     function renderWords() {
       const box = root.querySelector('#aipf-words');
-      const wd = dailyWords(), cd = dailyCodeLines();
-      if (wd <= 0 && cd <= 0) { box.innerHTML = 'Add some use to see how much your AI is writing.'; return; }
+      const wd = dailyWords();
+      if (wd <= 0) { box.innerHTML = 'Add some use to see how much your AI is writing.'; return; }
       let html = '';
-      if (wd > 0) {
-        const wy = wd * DAYS;
-        html += 'About <b>' + fmtWords(wd) + ' words a day</b>, roughly <b>' + fmtWords(wy) + ' a year</b>. At the average American reading pace of ' + WPM +
-          ' words a minute, that is <b>' + fmtReadingTime(wd / WPM) + '</b> of reading a day, or <b>' + fmtReadingTime(wy / WPM) + '</b> nonstop across the year.';
-      } else {
-        html += 'Almost all of your use is code, not prose to read.';
-      }
-      if (cd > 0) {
-        const cy = cd * DAYS;
-        html += '<span class="aipf-words-code">It also writes about <b>' + fmtWords(cd) + ' lines of code a day</b>, roughly <b>' + fmtWords(cy) + '</b> a year.</span>';
-      }
+      const wy = wd * DAYS;
+      html += 'About <b>' + fmtWords(wd) + ' words a day</b>, roughly <b>' + fmtWords(wy) + ' a year</b>. At the average American reading pace of ' + WPM +
+        ' words a minute, that is <b>' + fmtReadingTime(wd / WPM) + '</b> of reading a day, or <b>' + fmtReadingTime(wy / WPM) + '</b> nonstop across the year.';
       const miles = Math.round(aiDaily('carbon') * DAYS / 400); // EPA ~400 g CO2 per vehicle-mile
       html += '<span class="aipf-words-miles">If you use chatbots this much every day, your annual use emits as much as driving the average gas car <b>' + miles.toLocaleString('en-US') + '</b> mile' + (miles === 1 ? '' : 's') + ' once.</span>';
       box.innerHTML = html;
@@ -1047,6 +1197,7 @@ const structuredData = [
 
     function updateOutputs() {
       renderRunning(); updateRowMeta(); renderHeadline(); renderGridNote(); renderWords(); renderDaily(); renderAnnualSplit(); renderCompany();
+      renderProjectTotal(); // grid factor affects coding-project carbon even when no session changed
     }
     // ---- Cited report ----
     function escXml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
@@ -1075,10 +1226,11 @@ const structuredData = [
         const md = getModel(r.model);
         const ct = perPromptTriple(md, r.size, 'carbon');
         const wt = perPromptTriple(md, r.size, 'water');
-        const per = ct[0], d = r.count * per;
-        aiDay += d; aiMin += r.count * ct[1]; aiMax += r.count * ct[2]; eD += r.count * md.sizes[r.size].wh;
-        wDay += r.count * wt[0]; wMin += r.count * wt[1]; wMax += r.count * wt[2];
-        rowsHtml += '<tr><td>' + escXml(md.name) + '</td><td>' + escXml(sizeLabel(r.model, SIZES.find((x) => x.id === r.size))) + '</td><td class="n">' + r.count + '</td><td class="n">' + fmtCarbon(d) + '</td><td class="n">' + fmtWater(r.count * wt[0]) + '</td></tr>';
+        const retry = r.retry || 1, n = r.count * retry;
+        const per = ct[0], d = n * per;
+        aiDay += d; aiMin += n * ct[1]; aiMax += n * ct[2]; eD += n * md.sizes[r.size].wh;
+        wDay += n * wt[0]; wMin += n * wt[1]; wMax += n * wt[2];
+        rowsHtml += '<tr><td>' + escXml(md.name) + '</td><td>' + escXml(sizeLabel(r.model, SIZES.find((x) => x.id === r.size))) + '</td><td class="n">' + r.count + (retry > 1 ? ' × ' + retry : '') + '</td><td class="n">' + fmtCarbon(d) + '</td><td class="n">' + fmtWater(n * wt[0]) + '</td></tr>';
       }
       const aiYr = aiDay * DAYS, wYr = wDay * DAYS;
       const day = dailyFootprint('carbon');
@@ -1148,8 +1300,12 @@ const structuredData = [
       root.dataset.metric = state.metric;
     }
     function bindEvents() {
-      root.querySelector('#aipf-addrow').addEventListener('click', () => { state.rows.push({ uid: uidSeq++, model: 'gpt-5.5', size: 'chat', count: 1 }); renderRows(); updateOutputs(); });
-      root.querySelector('#aipf-reset').addEventListener('click', () => { setDefaultRows(); renderRows(); updateOutputs(); });
+      root.querySelector('#aipf-addrow').addEventListener('click', () => { state.rows.push({ uid: uidSeq++, model: 'gpt-5.5', size: 'chat', count: 1, retry: 1 }); renderRows(); updateOutputs(); });
+      root.querySelector('#aipf-addrow-code').addEventListener('click', () => {
+        state.codingSessions.push({ uid: uidSeq++, model: 'gpt-5.5', lines: REF_LINES_STANDARD });
+        renderCodeRows(); renderProjectTotal();
+      });
+      root.querySelector('#aipf-reset').addEventListener('click', () => { setDefaultRows(); state.codingSessions = []; renderRows(); updateOutputs(); });
       root.querySelector('#aipf-share').addEventListener('click', (e) => {
         const btn = e.currentTarget;
         const done = () => { btn.textContent = 'Link copied'; setTimeout(() => { btn.textContent = 'Copy a link to this estimate'; }, 1800); };
@@ -1272,14 +1428,24 @@ const structuredData = [
   .aipf-hint { font-family: var(--font-body); font-size: 0.78rem; line-height: 1.5; color: var(--dim); margin: 0 0 0.9rem; }
   .aipf-writes + .aipf-hint { margin-top: 2rem; padding-top: 1.3rem; border-top: 1px solid var(--border); }
 
+  /* ---- Usage sub-sections (chatbot/text, coding agent — media generation joins later) ---- */
+  .aipf-usage-section + .aipf-usage-section { margin-top: 1.3rem; padding-top: 1.1rem; border-top: 1px solid var(--border); }
+  .aipf-usage-h {
+    font-family: var(--font-body); font-weight: 600; font-size: 0.72rem; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text-secondary); margin: 0 0 0.55rem;
+  }
+
   .aipf-rows-head {
-    display: grid; grid-template-columns: 1fr 1.3fr auto 1.1rem; gap: 0.6rem;
+    display: grid; grid-template-columns: 1fr 1.3fr auto auto 1.1rem; gap: 0.6rem;
     font-family: var(--font-body); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.01em;
     color: var(--text-secondary); padding-bottom: 0.45rem; border-bottom: 1px solid var(--text);
   }
-  .aipf-rows-head span:nth-child(3) { text-align: center; }
+  .aipf-rows-head span:nth-child(3), .aipf-rows-head span:nth-child(4) { text-align: center; }
+  .aipf-rows-head--code { grid-template-columns: 1fr auto 1.1rem; }
+  .aipf-rows-head--code span:nth-child(2) { text-align: center; }
   .aipf-rowwrap { padding: 0.45rem 0; border-bottom: 1px solid var(--border); }
-  .aipf-row { display: grid; grid-template-columns: 1fr 1.3fr auto 1.1rem; gap: 0.6rem; align-items: center; }
+  .aipf-row { display: grid; grid-template-columns: 1fr 1.3fr auto auto 1.1rem; gap: 0.6rem; align-items: center; }
+  .aipf-row--code { grid-template-columns: 1fr auto 1.1rem; }
   .aipf-row-meta { font-family: var(--font-body); font-size: 0.67rem; color: var(--dim); margin-top: 0.3rem; font-variant-numeric: tabular-nums; }
   .aipf-empty { color: var(--dim); padding: 0.8rem 0; font-size: 0.9rem; }
   .aipf-rowdel { width: 1.1rem; height: 1.3rem; border: none; background: none; color: var(--dim); font-size: 1.05rem; line-height: 1; cursor: pointer; transition: color 0.12s; }
@@ -1306,6 +1472,30 @@ const structuredData = [
     font-variant-numeric: tabular-nums; padding: 0.1rem 0;
   }
   .aipf-count:focus-visible { outline: none; }
+
+  .aipf-retry { display: inline-flex; align-items: center; gap: 0.15rem; border: 1px solid var(--border-strong); border-radius: 5px; background: var(--bg-subtle); padding: 0 0.4rem; justify-self: center; }
+  .aipf-retry-x { font-family: var(--font-body); font-size: 0.78rem; color: var(--dim); }
+  .aipf-retry-input {
+    width: 2.6ch; border: none; background: transparent;
+    color: var(--text); text-align: center; font-family: var(--font-body); font-size: 0.85rem;
+    font-variant-numeric: tabular-nums; padding: 0.32rem 0;
+  }
+  .aipf-retry-input:focus-visible { outline: none; }
+
+  .aipf-lines { display: inline-flex; align-items: center; gap: 0.35rem; border: 1px solid var(--border-strong); border-radius: 5px; background: var(--bg-subtle); padding: 0 0.55rem; justify-self: start; }
+  .aipf-lines-input {
+    width: 6ch; border: none; background: transparent;
+    color: var(--text); text-align: right; font-family: var(--font-body); font-size: 0.88rem;
+    font-variant-numeric: tabular-nums; padding: 0.32rem 0;
+  }
+  .aipf-lines-input:focus-visible { outline: none; }
+  .aipf-lines-suffix { font-family: var(--font-body); font-size: 0.78rem; color: var(--dim); }
+
+  .aipf-project-total {
+    font-family: var(--font-body); font-size: 0.86rem; line-height: 1.55; color: var(--text-secondary);
+    margin: 0.9rem 0 0; padding: 0.7rem 0.85rem; background: var(--accent-subtle); border-radius: 5px;
+  }
+  .aipf-project-total b { color: var(--text); }
 
   .aipf-addrow {
     margin: 0.9rem 0 0; background: none; border: none; padding: 0; color: var(--accent);
@@ -1462,11 +1652,14 @@ const structuredData = [
     /* Usage rows: full-width model and output selects, with the counter and the
        remove button on their own line, so nothing is squeezed or truncated. */
     .aipf-rows-head { display: none; }
-    .aipf-row { grid-template-columns: 1fr auto; grid-template-areas: "model model" "size size" "stepper del"; gap: 0.5rem 0.6rem; align-items: center; }
+    .aipf-row { grid-template-columns: auto auto 1fr; grid-template-areas: "model model model" "size size size" "stepper retry del"; gap: 0.5rem 0.6rem; align-items: center; }
     .aipf-row .aipf-rsel:first-child { grid-area: model; }
     .aipf-row .aipf-rsel:nth-child(2) { grid-area: size; }
     .aipf-row .aipf-stepper { grid-area: stepper; justify-self: start; }
+    .aipf-row .aipf-retry { grid-area: retry; justify-self: start; }
     .aipf-row .aipf-rowdel { grid-area: del; justify-self: end; }
+    .aipf-row--code { grid-template-columns: auto 1fr; grid-template-areas: "model model" "lines del"; }
+    .aipf-row--code .aipf-lines { grid-area: lines; justify-self: start; }
     /* Bigger touch targets */
     .aipf-step { width: 2rem; height: 2rem; font-size: 1.15rem; }
     .aipf-count { width: 3ch; height: 2rem; font-size: 0.95rem; }
