@@ -1,0 +1,19 @@
+country,year,carbon_intensity_elec,calculator_current_g_co2e_per_kwh
+China,2023,583.040,580
+China,2024,555.400,580
+China,2025,525.340,580
+European Union (27),2023,235.842,215
+European Union (27),2024,211.203,215
+European Union (27),2025,209.897,215
+India,2023,713.360,700
+India,2024,705.400,700
+India,2025,670.130,700
+United Kingdom,2023,235.630,125
+United Kingdom,2024,216.500,125
+United Kingdom,2025,217.410,125
+United States,2023,392.890,380
+United States,2024,383.780,380
+United States,2025,384.400,380
+World,2023,483.180,480
+World,2024,471.080,480
+World,2025,458.290,480

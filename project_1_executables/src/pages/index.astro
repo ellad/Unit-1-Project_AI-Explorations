@@ -4,9 +4,8 @@
  *
  * Readers build their usage from rows of (model x output length x count per
  * day), which sum into one daily and annual carbon and water cost. The page
- * then sets that against their own footprint (where they live, diet, flying,
- * with AI carbon on their regional grid), next to everyday things, and over a
- * year against bigger lifestyle choices. State is saved to the URL for sharing.
+ * compares it with entered digital activities and fixed everyday references.
+ * Location sets the electricity grid factor. All calculator inputs and chart selections are URL-shareable.
  *
  * Per-model energy / carbon / water estimates (including uncertainty ranges)
  * come from the EcoLogits library (v0.10), the engine behind the EcoLogits
@@ -18,7 +17,7 @@ import Base from '@/layouts/Base.astro';
 const pageTitle = 'AI carbon & water footprint calculator (ChatGPT, Claude, Gemini)';
 const ogTitle = 'What does your chatbot use actually cost?';
 const pageDescription =
-  'A free calculator: enter your daily ChatGPT, Claude, and Gemini prompts to see the carbon and water footprint of your AI use, set against your real-world footprint, everyday things, and bigger lifestyle changes.';
+  'A free calculator: enter your daily ChatGPT, Claude, and Gemini prompts to see the carbon and water footprint of your AI use, compared with your digital activities, everyday things, and bigger lifestyle changes.';
 const pageUrl = 'https://andymasley.com/visuals/ai-prompt-footprint';
 const ogImage = '/images/og/og-ai-prompt-footprint.png';
 const datePublished = '2026-06-10';
@@ -136,13 +135,13 @@ const structuredData = [
       <h1 class="aipf-title">What your chatbot use actually costs</h1>
       <p class="aipf-dek">
         Enter an average day of AI use and this tool adds it up into one carbon and water cost, set
-        against your own footprint and the everyday things around it. Numbers for AI's energy and water come from
+        against your digital activities and everyday things. Numbers for text AI's energy and water come from
         <a href="https://huggingface.co/spaces/genai-impact/ecologits-calculator" target="_blank" rel="noopener">EcoLogits</a>,
         an open-source estimator of the energy, carbon, and water behind each AI model. The Claude
         numbers are the shakiest here: Anthropic hasn't said how Claude is built, so EcoLogits has
         to guess, and its guess might run low
         (<a href="#methodology" onclick="document.getElementById('methodology').open=true">more in the methodology</a>). For carbon I
-        use the average grid intensity of the region you pick (not EcoLogits' single whole-world
+        use the average grid intensity of the region you pick for text AI (not EcoLogits' single whole-world
         average) plus the hardware's embodied emissions; everything else is sourced in the methodology
         below. Training is excluded as too uncertain, but split across all users it
         <a href="https://blog.andymasley.com/p/training-ai-models-doesnt-emit-that" target="_blank" rel="noopener">adds little to your personal footprint</a>.
@@ -150,13 +149,6 @@ const structuredData = [
         <a href="https://www.andymasley.com/visuals/carbon-footprint/" target="_blank" rel="noopener">my visual here</a>.
       </p>
     </header>
-
-    <div class="aipf-pagetabs" role="tablist" aria-label="View">
-      <button type="button" class="aipf-pagetab is-active" data-tab="calc" role="tab" aria-selected="true" id="aipf-pagetab-calc" aria-controls="aipf-tab-calc">Calculator</button>
-      <button type="button" class="aipf-pagetab" data-tab="water" role="tab" aria-selected="false" id="aipf-pagetab-water" aria-controls="aipf-tab-water">Water use around the world</button>
-    </div>
-
-    <div id="aipf-tab-calc" class="aipf-tabpanel" role="tabpanel" aria-labelledby="aipf-pagetab-calc">
 
     <div class="aipf-toolbar-top">
       <div class="aipf-toggle" role="group" aria-label="Footprint type">
@@ -175,7 +167,7 @@ const structuredData = [
     <!-- Tool: inputs on the left, the answer on the right -->
     <div class="aipf-tool">
       <div class="aipf-in" aria-label="Your daily AI usage">
-        <div class="aipf-in-head"><span>Your AI use</span><span class="aipf-in-sub">per day</span></div>
+        <div class="aipf-in-head"><h2>Your AI use</h2><span class="aipf-in-sub">daily use &amp; project sessions</span></div>
 
         <div class="aipf-usage-section" aria-label="Chatbot and text prompts">
           <h3 class="aipf-usage-h">Chatbot &amp; text</h3>
@@ -183,7 +175,7 @@ const structuredData = [
             <span>Model</span><span>Typical output</span><span>Prompts/day</span><span>Retries</span><span></span>
           </div>
           <div class="aipf-rows" id="aipf-rows"></div>
-          <button type="button" class="aipf-addrow" id="aipf-addrow">+ add another</button>
+          <button type="button" class="aipf-addrow" id="aipf-addrow">+ Add another</button>
           <p class="aipf-hint">"Typical output" is how long each reply is.</p>
         </div>
 
@@ -193,19 +185,49 @@ const structuredData = [
             <span>Model</span><span>Lines of code</span><span></span>
           </div>
           <div class="aipf-rows" id="aipf-rows-code"></div>
-          <button type="button" class="aipf-addrow" id="aipf-addrow-code">+ add a session</button>
+          <button type="button" class="aipf-addrow" id="aipf-addrow-code">+ Add a session</button>
           <p class="aipf-project-total" id="aipf-project-total" aria-live="polite"></p>
-          <p class="aipf-hint">A "coding / agent session" means one full run of an AI coding assistant that writes and edits code across many steps — you tell it roughly how many lines of code the session produced, and it estimates the rest. Lines convert to an estimated token count (<code>lines × 10 ÷ 15%</code>, since only about 15% of a session's output tokens are final code — the rest is the model's own reasoning, tool calls, and file exploration), then that token count is costed at the same per-token energy/carbon/water rate as EcoLogits' own 100,000-token "assist application development" benchmark for the chosen model. This is a rough, linearly-scaled estimate, not a separate study of sessions at every length — and it does not use Couch's separate self-reported energy method. For scale: about 1,500 lines matches that fixed 100,000-token EcoLogits benchmark exactly (a fixed content-length benchmark, not typical-session data), and about 8,900 lines matches one developer's self-logged ~592,000-token session (Couch, n=1) — one person's data, not a representative average.</p>
-          <p class="aipf-hint">Each session is a one-time project cost, not a recurring daily use — that is why this section has no "per day" framing. The project total below sums every session and stays separate from your combined AI-use total and the day/year figures elsewhere on this page.</p>
+          <p class="aipf-hint">A "coding / agent session" means one full run of an AI coding assistant that writes and edits code across many steps — you tell it roughly how many lines of code the session produced, and it estimates the rest. Lines convert to an estimated token count (<code>lines × 10 ÷ 15%</code>, using our rough assumptions of 10 tokens per line and a 15% code fraction, not measured universal ratios), then that token count is costed at the same per-token energy/carbon/water rate as the record retained from Masley’s calculator for the EcoLogits 100,000-token "assist application development" benchmark for the chosen model. This is a rough, linearly-scaled estimate, not a separate study of sessions at every length — and it does not use Couch's separate self-reported energy method. For scale: about 1,500 lines matches that fixed 100,000-token EcoLogits benchmark exactly (a fixed content-length benchmark, not typical-session data), and about 8,900 lines matches one developer's self-logged ~592,000-token session (<a href="https://simonpcouch.com/blog/2026-01-20-cc-impact/" target="_blank" rel="noopener">Couch</a>, n=1) — one person's data, not a representative average.</p>
+          <p class="aipf-hint">Each session is a one-time project cost, not a recurring daily use — that is why this section has no "per day" framing. The project total above sums every session and stays separate from your combined AI-use total and the day/year figures elsewhere on this page.</p>
           <p class="aipf-hint">Sessions have no retry multiplier, unlike the entries below. A session's lines-of-code figure already describes one full run, and re-running an entire agent session rarely reproduces the same amount of code — so a repeated run is better represented as its own separate session, with its own line count, than as a flat multiple of this one.</p>
         </div>
 
-        <p class="aipf-running" id="aipf-running" aria-live="polite"></p>
-        <div class="aipf-writes">
-          <p class="aipf-writes-h">What it writes</p>
-          <p class="aipf-words" id="aipf-words" aria-live="polite"></p>
+        <div class="aipf-usage-section" aria-label="Image and video generation">
+          <h3 class="aipf-usage-h">Media generation</h3>
+          <h4 class="aipf-usage-subh">Image generation</h4>
+          <div class="aipf-rows-head aipf-rows-head--image" aria-hidden="true"><span>Images/day</span><span>Retries</span><span></span></div>
+          <div class="aipf-rows" id="aipf-rows-image"></div>
+          <button type="button" class="aipf-addrow" id="aipf-addrow-image">+ Add images</button>
+          <p class="aipf-hint">Images use <a href="https://arxiv.org/abs/2311.16863" target="_blank" rel="noopener">Luccioni et al.'s published average</a> of 2.907 Wh per image across eight open Stable Diffusion models. This is a proxy for commercial tools, not a measurement of every provider. We use this average as a single estimate; the source's per-model extremes are not an uncertainty range around it. Carbon and water are our own calculations from energy, not published average carbon or measured water figures.</p>
+          <h4 class="aipf-usage-subh">Video generation</h4>
+          <div class="aipf-rows-head aipf-rows-head--video" aria-hidden="true"><span>Clips/day</span><span>Seconds/clip</span><span>Retries</span><span></span></div>
+          <div class="aipf-rows" id="aipf-rows-video"></div>
+          <button type="button" class="aipf-addrow" id="aipf-addrow-video">+ Add video clips</button>
+          <p class="aipf-hint">Video uses a <a href="https://arxiv.org/abs/2607.04553" target="_blank" rel="noopener">Veo 3 estimate</a> of 19.8–43.4 Wh (mean 30.8 Wh) for an 8-second, 720p clip. It is inferred from API response times and assumed hardware, not direct energy measurement; the project's source assessment records the paper as awaiting peer review. We multiply by <a href="https://datacenters.google/efficiency/" target="_blank" rel="noopener">Google's 1.09 facility-overhead factor</a> as a separate assumption. Other providers may differ.</p>
+          <p class="aipf-hint">720p is fixed. Doubling seconds doubles the estimate: that linear scaling is our assumption, not a finding about other clip lengths. Video energy and carbon show a range; water uses the source's mean energy and is a single derived estimate.</p>
+          <p class="aipf-hint">Media carbon uses your selected location's electricity factor, without a hardware-emissions estimate. Media water uses <a href="https://www.nlr.gov/docs/fy04osti/33905.pdf" target="_blank" rel="noopener">NREL’s historical U.S. thermoelectric factor of 0.47 gallons per kWh</a> for electricity-generation cooling. It is derived, not measured, and does not estimate on-site data-center cooling. Counts are daily; retries multiply each entry once.</p>
+          <p class="aipf-hint">Copy link and the cited report include text, media, coding sessions, digital-life activities, router settings, and chart selections.</p>
         </div>
-        <p class="aipf-hint">Each chatbot/text row's "×" field counts retries or regenerations of that same prompt. It defaults to 1 (the original output only) — no research gives a typical retry rate, so any higher number is your own estimate of your behavior, not a study finding.</p>
+
+        <p class="aipf-running" id="aipf-running" aria-live="polite"></p>
+        <section class="aipf-pie-section" aria-labelledby="aipf-pie-heading">
+          <h3 class="aipf-usage-h" id="aipf-pie-heading">What makes up your footprint?</h3>
+          <p class="aipf-hint">One day of entered AI use, digital activities, and the always-on router. Coding sessions count once only when you select them in the project builder.</p>
+          <div class="aipf-pie-controls">
+            <label for="aipf-pie-metric">Show <select id="aipf-pie-metric"><option value="carbon">Carbon</option><option value="water">Water</option></select></label>
+            <label for="aipf-pie-bound">Estimate <select id="aipf-pie-bound"><option value="low">Lower</option><option value="high">Upper</option></select></label>
+          </div>
+          <p class="aipf-hint">Lower/upper uses the corresponding end of each available range; single estimates stay the same. These are illustrative scenarios, not confidence limits for the total. Source coverage differs across activities; this is not a complete personal footprint.</p>
+          <p id="aipf-pie-total" class="aipf-pie-total" aria-live="polite"></p>
+          <div class="aipf-pie-disc" id="aipf-pie-disc" aria-hidden="true"></div>
+          <div class="aipf-pie-table-wrap"><table class="aipf-pie-table">
+            <caption id="aipf-pie-caption">One-day breakdown</caption>
+            <thead><tr><th scope="col">Contribution</th><th scope="col">Estimate shown</th><th scope="col">Share</th></tr></thead>
+            <tbody id="aipf-pie-values"></tbody>
+          </table></div>
+          <p class="aipf-hint">Zero contributions are omitted. Percentages may differ slightly from 100% after rounding. Selections affect only this chart, not daily AI totals or project totals. Chart selections are saved in shared links and included in the cited report.</p>
+        </section>
+        <p class="aipf-hint">Each chatbot/text, image, or video row's "×" field counts retries or regenerations of that same prompt. It defaults to 1 (the original output only) — no research gives a typical retry rate, so any higher number is your own estimate of your behavior, not a study finding.</p>
         <p class="aipf-tools">
           <button type="button" class="aipf-link" id="aipf-reset">Reset</button>
           <span class="aipf-tools-sep">·</span>
@@ -215,15 +237,33 @@ const structuredData = [
 
       <div class="aipf-out" aria-label="How it compares">
         <div class="aipf-out-head">
-          <p class="aipf-life">
-            vs. a day for someone in
-            <select id="aipf-loc" aria-label="Where you live"></select> who lives in
-            <span class="aipf-nw"><select id="aipf-home" aria-label="Your home"></select>,</span> drives
-            <span class="aipf-nw"><select id="aipf-drive" aria-label="How much you drive"></select>,</span> eats
-            <span class="aipf-nw"><select id="aipf-diet" aria-label="Your diet"></select>,</span> and flies
-            <select id="aipf-fly" aria-label="How much you fly"></select>
-          </p>
+          <label class="aipf-grid-setting" for="aipf-loc">Electricity grid
+            <select id="aipf-loc" aria-label="Electricity grid location"></select>
+          </label>
         </div>
+        <section class="aipf-digital" aria-labelledby="aipf-digital-title">
+          <h2 class="aipf-h2" id="aipf-digital-title">Your digital life</h2>
+          <p class="aipf-sub">Enter daily hours for each activity (0–24; decimals are welcome). These comparisons stay separate from your AI use. Each activity is independent, so overlapping hours are allowed.</p>
+          <div class="aipf-activities" id="aipf-activities"></div>
+          <div class="aipf-project-total" id="aipf-digital-total" aria-live="polite"></div>
+          <p class="aipf-hint">Yearly estimates assume the same daily hours for 365 days. Gaming and any total that includes it show a low–high range, not an average. On comparison bars, a patterned end shows that range. The combined activity total excludes AI, coding projects, and the router.</p>
+          <p class="aipf-hint">These sources cover different parts of each activity, so this sum is a rough comparison, not a complete digital footprint. All activity water is derived from electricity using <a href="https://www.nlr.gov/docs/fy04osti/33905.pdf" target="_blank" rel="noopener">NREL’s historical U.S. thermoelectric factor of 0.47 gal/kWh</a>; it represents electricity-generation cooling, not measured water use or on-site data-center cooling.</p>
+          <p class="aipf-hint">Activity hours are included in Copy link and the cited report.</p>
+        </section>
+        <section class="aipf-digital" aria-labelledby="aipf-router-title">
+          <h2 class="aipf-h2" id="aipf-router-title">Home Wi-Fi / router</h2>
+          <p class="aipf-sub">An always-on baseline: 24 hours a day, regardless of your activity hours. This is a separate infrastructure comparison, outside both AI-use and digital-activity totals.</p>
+          <div class="aipf-rowwrap" id="aipf-router-control"></div>
+          <p class="aipf-hint" id="aipf-router-guide"><strong>Rough reference range: 5–20 W.</strong> Enter your router’s estimated average power above, or use a measured value if available. At 24 hours a day, this range uses 0.12–0.48 kWh per day. Watts describe power draw, not daily energy use; your equipment may fall outside this range.</p>
+          <div class="aipf-activity-results" id="aipf-router-results" aria-live="polite"></div>
+          <details class="aipf-activity-source">
+            <summary>Source and limitations</summary>
+            <p class="aipf-hint">The 5–20 W guide is a user-selected estimate informed by their research and the range in <a href="https://futuretechinsights.io/smart-home/broadband-router-electricity-cost-guide/" target="_blank" rel="noopener">Future Tech Insights</a>. That article does not document wattage measurements and contains cost-calculation errors; this is a rough input guide, not a verified average or a required input limit. Calculations use your entered wattage.</p>
+            <p class="aipf-hint">The adjustable 6.5 W default is a chosen example, not a measured average or a verified component-allowance total. Enter an estimate for your own router or gateway; its power draw may be higher or lower.</p>
+            <p class="aipf-hint">Electricity is watts × 24 ÷ 1,000 kWh per day; yearly figures multiply by 365. Carbon is derived using your selected electricity grid. Water is derived using <a href="https://www.nlr.gov/docs/fy04osti/33905.pdf" target="_blank" rel="noopener">NREL’s historical U.S. thermoelectric factor of 0.47 gallons per kWh</a> for electricity-generation cooling, not measured router water use. This is the assumed full-day electricity cost, not an extra cost caused by streaming or other individual activities.</p>
+          </details>
+          <p class="aipf-hint">Router wattage is included in Copy link and the cited report.</p>
+        </section>
         <div class="aipf-verdict" id="aipf-headline" aria-live="polite"></div>
         <p class="aipf-tools aipf-tools--summary">
           <button type="button" class="aipf-link" id="aipf-share-summary">Copy my summary</button>
@@ -234,10 +274,11 @@ const structuredData = [
           <div class="aipf-bars aipf-bars--compact" id="aipf-daily-bars" aria-live="polite"></div>
         </div>
         <p class="aipf-fine" id="aipf-grid-note"></p>
-        <p class="aipf-fine">Excludes training, image and video generation, and retries.</p>
+        <p class="aipf-fine">Includes text, image, and video generation with entered retries. Excludes training; coding sessions remain a separate project total.</p>
         <p class="aipf-fine">*A note on the Claude models: Anthropic has never said how Claude is built, so EcoLogits has to guess. Its guess is that Claude Opus and Sonnet only use a fraction of their parameters at a time. Some people who follow this closely think Claude actually uses all of them on every token, and if that's right, the Claude numbers here are too low. <a href="#methodology" onclick="document.getElementById('methodology').open=true">More in the methodology below</a>.</p>
       </div>
     </div>
+
 
     <!-- Below: a year, split into emissions added vs cuts you could make -->
     <div class="aipf-below" aria-label="In a year, ways you add">
@@ -255,7 +296,7 @@ const structuredData = [
       <h2 class="aipf-h2">What if your whole company did this?</h2>
       <p class="aipf-sub">
         How many people work at your company?
-        <input type="number" class="aipf-headcount" id="aipf-headcount" min="1" max="1000000" step="1" value="300" aria-label="Number of employees" />
+        <input type="text" inputmode="numeric" class="aipf-headcount" id="aipf-headcount" min="1" max="1000000" step="1" value="300" aria-label="Number of employees" />
       </p>
       <p class="aipf-sub" id="aipf-company-sub" aria-live="polite"></p>
     </div>
@@ -263,6 +304,11 @@ const structuredData = [
     <details class="aipf-method" id="methodology">
       <summary>How these numbers are made</summary>
       <div class="aipf-method-body">
+        <p><strong>Estimates retained from Andy Masley.</strong> This project adapts <a href="https://andymasley.com/visuals/ai-prompt-footprint-source.txt" target="_blank" rel="noopener">Masley’s original calculator source</a>. The following stored estimates were retained unchanged. Their presence in the original code is verified; this project has not independently reproduced them from the underlying studies.</p>
+        <p><strong>AI model records:</strong> all 72 records across nine models and eight output sizes, including energy, embodied hardware carbon, water, and stored low/high estimates. Masley attributes these to EcoLogits. Text calculations use these records, and our coding-project conversion scales a retained record. The snapshot’s version, water assumptions, and statistical interpretation remain subject to verification.</p>
+        <p><strong>Retained carbon comparisons:</strong> coffee, PS5, microwave, driving, shower, dishwasher, dryer, book printing; T-shirt, jeans, smartphone, sofa, bicycle, laptop, TV, flights and car manufacture. Retained savings cover LEDs, recycling, hang-drying, hybrid/electric cars, green electricity, home retrofit, green heating, and living car-free.</p>
+        <p><strong>Retained water comparisons:</strong> book printing, home electricity, T-shirt, jeans, smartphone, buying five fewer cotton garments, native planting, and leaving a lawn unwatered. These inherited values retain their approximation and accounting-boundary limitations. Attribution establishes provenance, not independent validation or like-for-like comparability.</p>
+        <p><strong>Project additions and revisions:</strong> grid factors now use OWID/Ember’s 2025 data. Media generation, coding line-count conversion, digital-life activities, router estimates, workplace and air-conditioning comparisons, and bottle/rose/tobacco water comparisons were added or changed here. Their sources and assumptions are described separately in this methodology and beside the inputs.</p>
         <p>
           <strong>Per-model AI estimates.</strong> The energy, carbon, and water numbers for each
           prompt come from the open-source <a href="https://ecologits.ai/" target="_blank" rel="noopener">EcoLogits</a>
@@ -270,9 +316,7 @@ const structuredData = [
           <a href="https://huggingface.co/spaces/genai-impact/ecologits-calculator" target="_blank" rel="noopener">EcoLogits calculator</a>.
           The model list is current as of June 2026. EcoLogits estimates electricity from how big
           each model is (really, how many parameters it uses on each token) and how long the reply
-          is, then adds the cost of manufacturing the hardware. The low and high ends are
-          EcoLogits' own 95% confidence interval, which mostly comes down to nobody outside these
-          companies knowing how big the closed models really are. One of its guesses matters a lot
+          is, then adds the cost of manufacturing the hardware. The <a href="https://andymasley.com/visuals/ai-prompt-footprint-source.txt" target="_blank" rel="noopener">original Masley source</a> describes the stored low and high ends as EcoLogits’ 95% confidence interval. We have not independently verified that statistical interpretation for these records; the displayed endpoints are retained source estimates, not a verified confidence interval. One of its guesses matters a lot
           here: Anthropic has never said how Claude is built, and
           <a href="https://github.com/genai-impact/ecologits/blob/main/ecologits/data/models.json" target="_blank" rel="noopener">EcoLogits' model data</a>
           assumes Claude Opus and Sonnet are mixture-of-experts models, which would mean they only
@@ -282,8 +326,7 @@ const structuredData = [
           every time. Others think Claude is a very large mixture-of-experts. If the dense camp is
           right, the Claude numbers on this page are probably too low. The water numbers count
           consumption, not withdrawal: water that is actually gone, evaporated cooling the data
-          center or generating its electricity, not water taken in and then returned. Every water
-          figure on this page works this way, so the comparisons are apples to apples.
+          center or generating its electricity, not water taken in and then returned. Accounting boundaries differ: the derived electricity-water estimates omit on-site cooling, while some legacy product comparisons use broader water footprints. They are approximate context, not interchangeable measurements.
         </p>
         <p>
           <strong>Carbon basis.</strong>
@@ -291,62 +334,40 @@ const structuredData = [
           prompt's electricity use and its embodied (hardware-manufacturing) emissions separately. We
           keep EcoLogits' embodied figure as-is and cost the electricity on the grid where you live,
           using carbon intensities from
-          <a href="https://ember-energy.org/latest-insights/global-electricity-review-2024/" target="_blank" rel="noopener">Ember 2024</a>
+          <a href="https://github.com/owid/energy-data/blob/master/owid-energy-data.csv" target="_blank" rel="noopener">Ember data via OWID (2025 observations)</a>
           and <a href="https://ourworldindata.org/grapher/carbon-intensity-electricity" target="_blank" rel="noopener">Our World in Data</a>:
-          roughly 380 (US), 215 (EU), 125 (UK), 580 (China), 700 (India), and 480 (world)
-          g CO<sub>2</sub>e/kWh. Water is left on EcoLogits' global basis.
+          384.40 (US), 209.897 (EU, 27 countries), 217.41 (UK), 525.34 (China), 670.13 (India), and 458.29 (world)
+          g CO<sub>2</sub>e/kWh. These are 2025 lifecycle electricity-generation intensities from the <a href="https://github.com/owid/energy-data/blob/master/owid-energy-codebook.csv" target="_blank" rel="noopener">carbon_intensity_elec field</a>, retrieved September 26, 2026. Water is left on EcoLogits' global basis.
+        </p>
+        <p><strong>Text outputs and coding projects.</strong> Text rows use the selected EcoLogits output-size record. Daily text, image, and video totals multiply by 365 for the yearly scenario; this assumes the same use every day, not a prediction. Coding sessions remain whole-project values and are never annualized.</p>
+        <p><strong>Coding conversion — calculator assumptions.</strong> We assume 10 tokens per line and a 15% code fraction: estimated tokens = lines × 10 ÷ 0.15. These are rough calculator assumptions, not measured universal ratios. Each model’s 100,000-token agent record retained from Masley’s calculator is divided by 100,000 and scaled to that estimate. Carbon adds the record's embodied hardware emissions to electricity × selected grid; water retains the record's EcoLogits basis. The 1,500-line anchor is our conversion of that fixed benchmark, not typical-session data. The approximately 8,900-line anchor converts <a href="https://simonpcouch.com/blog/2026-01-20-cc-impact/" target="_blank" rel="noopener">Couch's 592,000-token median session</a>, from one person's logs (n=1); his separate energy method is not used.</p>
+        <p><strong>Retries and regenerations.</strong> A multiplier of 1 counts the original generation once. Higher values are your estimate of total generations, including the original; we have no research-backed average retry count. Each text, image, or video entry is multiplied once before totals. Coding sessions have no multiplier: enter another session with its own line count for another run.</p>
+        <p><strong>Ranges and comparison scope.</strong> Text uses the stored EcoLogits low/high estimates; video uses its source's inferred range; gaming spans console and desktop-PC assumptions. These are different kinds of uncertainty. Summed endpoints and the pie's lower/upper scenarios are not a statistical confidence interval for the combined total. Image, coding, streaming, video-call, social-media, and router estimates are points, not claims of certainty. The whole-project comparison includes all coding sessions once; pie selections include only chosen sessions once for the illustrated day. Neither changes daily or yearly AI totals.</p>
+        <p>
+          <strong>Image and video generation.</strong> Images use the published 2.907 Wh average from
+          <a href="https://arxiv.org/abs/2311.16863" target="_blank" rel="noopener">Luccioni et al.</a> as an open-model proxy.
+          Video uses the indirectly inferred 8-second/720p Veo 3 range and mean from
+          <a href="https://arxiv.org/abs/2607.04553" target="_blank" rel="noopener">Lights, Camera, Carbon</a>,
+          with a separate 1.09 facility-overhead assumption from
+          <a href="https://datacenters.google/efficiency/" target="_blank" rel="noopener">Google</a>.
+          Duration scales linearly by our assumption. Media carbon is energy times the selected grid factor;
+          water is energy times <a href="https://www.nlr.gov/docs/fy04osti/33905.pdf" target="_blank" rel="noopener">NREL’s historical U.S. thermoelectric factor of 0.47 gal/kWh</a>.
+          Both are derived, excluding embodied hardware carbon and on-site cooling water. Image estimates
+          are single points; video energy/carbon have a range and video water uses mean energy.
+          See Media generation for proxy and evidence limitations.
         </p>
         <p>
-          <strong>Output, words, and code.</strong> Each row maps to an EcoLogits output-token count:
-          tweet (50), short email (170), article summary (250), chatbot reply (400), 5-page report
-          (5,000), long document (15,000), coding or agent session (100,000), and re-writing the
-          Lord of the Rings trilogy (500,000) — both EcoLogits benchmark tasks; the trilogy itself
-          runs about 480,000 words.
-          The coding/agent session uses EcoLogits' 100,000-token "assist application development"
-          benchmark, which represents one full run that writes and edits code across many steps.
-          Cost scales with length, so long generations dominate. Counts are per day; annual figures
-          multiply by 365. Words assume
-          <a href="https://help.openai.com/en/articles/4936856-what-are-tokens-and-how-to-count-them" target="_blank" rel="noopener">OpenAI's ~0.75 words per token</a>,
-          read at
-          <a href="https://biblio.ugent.be/publication/8647789" target="_blank" rel="noopener">238 words a minute (Brysbaert 2019)</a>.
-          A coding session is counted as lines of code (~10 tokens a line) rather than words to
-          read. Only about 15% of its output tokens are treated as actual code; the rest is
-          reasoning (which dominates for reasoning models), tool calls, file exploration, and
-          explanation, so a 100,000-token session is on the order of 1,500 lines. This is a rough
-          estimate with wide uncertainty.
+          <strong>Digital-life activities.</strong> Daily hours multiply each activity's energy factor;
+          yearly values multiply the daily result by 365. Streaming retains IEA's published carbon figure.
+          Video-call, gaming, and social-media carbon use the selected grid factor. Water uses the NREL
+          electricity factor. Gaming's console-to-PC endpoints are summed separately into the combined
+          activity range; no midpoint is invented. These activities never enter AI-use totals. <a href="#aipf-digital-title">Each activity's source and limitations</a> are available above.
         </p>
         <p>
-          <strong>Your footprint.</strong> "Where you live" is a regional baseline for goods,
-          services, and shared infrastructure (per-capita consumption from
-          <a href="https://ourworldindata.org/co2-emissions" target="_blank" rel="noopener">Our World in Data</a>);
-          home energy and driving are separate so they do not double-count.
-          <strong>Home</strong> runs from a small apartment to a big house, about 1.5 to 7 t
-          CO<sub>2</sub>e a year (<a href="https://www.eia.gov/consumption/residential/" target="_blank" rel="noopener">EIA RECS</a>;
-          <a href="https://www.pnas.org/doi/10.1073/pnas.1922205117" target="_blank" rel="noopener">Goldstein et al. 2020</a>).
-          <strong>Driving</strong> uses
-          <a href="https://www.epa.gov/greenvehicles/greenhouse-gas-emissions-typical-passenger-vehicle" target="_blank" rel="noopener">EPA's ~400 g CO<sub>2</sub>/mile</a>
-          across roughly 3,000 to 25,000 miles a year (<a href="https://www.fhwa.dot.gov/policyinformation/statistics/2023/vm1.cfm" target="_blank" rel="noopener">FHWA</a>).
-          <strong>Diet</strong> uses food footprints from
-          <a href="https://www.science.org/doi/10.1126/science.aaq0216" target="_blank" rel="noopener">Poore &amp; Nemecek (2018)</a>
-          and <a href="https://www.nature.com/articles/s43016-023-00795-w" target="_blank" rel="noopener">Scarborough et al. (2023)</a>:
-          about 1.05 t CO<sub>2</sub>e a year for a vegan diet up to 3.2 t for a heavy-meat one.
-          <strong>Flying</strong> is anchored to a transatlantic round trip of about 1.6 t
-          (<a href="https://iopscience.iop.org/article/10.1088/1748-9326/aa7541" target="_blank" rel="noopener">Wynes &amp; Nicholas 2017</a>);
-          the rarely / sometimes / often options are roughly 0.5, 1.5, and 5 such trips a year.
-          The <strong>water footprint</strong> uses <strong>blue water only</strong> — freshwater
-          actually drawn from rivers, lakes, and aquifers. We deliberately leave out
-          <em>green</em> water (rain that falls on farmland and would evaporate anyway, whether or
-          not a crop is grown) and <em>grey</em> water (a notional pollution-dilution volume),
-          because neither is a real draw on freshwater supplies. The AI figure is already blue
-          (data-center cooling and power-plant water), so both sides match. The per-person blue
-          footprint is from the
-          <a href="https://tools.waterfootprint.org/national-explorer/" target="_blank" rel="noopener">Water Footprint Network (Mekonnen &amp; Hoekstra)</a>:
-          about <a href="https://www.mdpi.com/2073-4441/12/11/3286" target="_blank" rel="noopener">450 m<sup>3</sup>/yr for the US</a>
-          and <a href="https://www.pnas.org/doi/10.1073/pnas.1109936109" target="_blank" rel="noopener">153 m<sup>3</sup> globally</a>
-          (the other regions are scaled by their irrigation intensity and are approximate). Removing
-          green water changes the picture a lot: most of a food's water is rain, so a beef burger
-          drops from ~1,700 L total to about <a href="https://theconversation.com/heres-how-much-water-it-takes-to-make-a-serving-of-beef-and-why-where-it-comes-from-is-so-important-208155" target="_blank" rel="noopener">6 L of freshwater</a>,
-          while irrigated crops stay high.
+          <strong>Home Wi-Fi / router.</strong> The separate always-on baseline uses watts × 24 hours
+          per day, then the selected electricity-grid carbon factor and NREL water factor. Annual values
+          multiply by 365. It stays outside AI and activity totals and never scales with activity hours.
+          <a href="#aipf-router-title">The router section</a> explains the chosen 6.5 W example and limitations.
         </p>
         <p>
           <strong>Lifestyle cuts (the yearly chart).</strong> The "saved" figures come from the
@@ -373,48 +394,35 @@ const structuredData = [
           cross-country flight ≈ 1 t, and a transatlantic round trip ≈ 1.6 t. A year of average US
           driving (~12,000 mi) ≈ 4.8 t at ~0.40 kg/mile
           (<a href="https://www.epa.gov/greenvehicles/greenhouse-gas-emissions-typical-passenger-vehicle" target="_blank" rel="noopener">EPA</a>).
-          A week-long cruise ≈ 800 kg, averaging a 7.2-day sailing
-          (<a href="https://www.cruisetricks.de/kreuzfahrt-co2-en/" target="_blank" rel="noopener">Humpe, Munich University of Applied Sciences</a>);
           a <a href="https://theconversation.com/coffee-heres-the-carbon-cost-of-your-daily-cup-and-how-to-make-it-climate-friendly-152629" target="_blank" rel="noopener">year of daily coffee ≈ 77 kg</a>;
           a <a href="https://howbadarebananas.com/" target="_blank" rel="noopener">cotton T-shirt ≈ 7 kg</a>;
           a new smartphone ≈ 70 kg (<a href="https://www.apple.com/environment/" target="_blank" rel="noopener">Apple</a>);
-          and a pair of jeans ≈ 33 kg (<a href="https://www.levistrauss.com/wp-content/uploads/2015/03/Full-LCA-Results-Deck-FINAL.pdf" target="_blank" rel="noopener">Levi's</a>).
+          and a pair of jeans ≈ 33 kg, retained from <a href="https://andymasley.com/visuals/ai-prompt-footprint-source.txt" target="_blank" rel="noopener">Masley’s calculator</a> (whole-life estimate, including consumer care).
         </p>
         <p>
           <strong>Everyday things.</strong> A cup of coffee: ~0.21 kg CO<sub>2</sub>e and
           <a href="https://www.weforum.org/stories/2019/03/hidden-water-in-your-cup-of-coffee/" target="_blank" rel="noopener">140 L of water</a>.
-          An hour on a <a href="https://www.playstation.com/en-us/legal/ecodesign/" target="_blank" rel="noopener">PS5 (~200 W)</a>;
+          An hour on a <a href="https://www.playstation.com/en-gb/legal/ecodesign/" target="_blank" rel="noopener">PS5 (~200 W)</a>;
           3 minutes in a <a href="https://www.siliconvalleypower.com/residents/save-energy/appliance-energy-use-chart" target="_blank" rel="noopener">1,200 W microwave</a>;
           a mile in a gas car (<a href="https://www.epa.gov/greenvehicles/greenhouse-gas-emissions-typical-passenger-vehicle" target="_blank" rel="noopener">EPA, ~0.40 kg</a>);
-          a 10-minute hot shower (<a href="https://www.epa.gov/watersense/showerheads" target="_blank" rel="noopener">~21 gal, EPA WaterSense</a>, plus water heating);
-          a <a href="https://www.energystar.gov/products/dishwashers" target="_blank" rel="noopener">dishwasher load (≤3.5 gal, ENERGY STAR)</a>;
+          a 10-minute hot shower (<a href="https://www.epa.gov/watersense/showerheads" target="_blank" rel="noopener">EPA WaterSense: ≤2 gallons/minute for labeled showerheads</a>, plus water heating);
+          a <a href="https://www.energystar.gov/products/dishwashers/key_product_criteria" target="_blank" rel="noopener">dishwasher load (ENERGY STAR standard-size limit: ≤3.2 gal/cycle)</a>;
           a <a href="https://www.energystar.gov/products/clothes_dryers" target="_blank" rel="noopener">dryer load (~3 kWh)</a>;
           <a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1530-9290.2011.00414.x" target="_blank" rel="noopener">printing a 400-page book (~2.7 kg, Wells 2012)</a>
           with <a href="https://waterfootprint.org/resources/Report46-WaterFootprintPaper.pdf" target="_blank" rel="noopener">paper's water footprint</a>;
-          a round of golf (~10.5 kg CO<sub>2</sub>e, averaging a
-          <a href="https://golfsustainable.com/en/co2-and-golf-what-is-the-footprint/" target="_blank" rel="noopener">Swiss Golf life-cycle study and a German golf club's own calculation</a>,
-          both including the golfer's travel to and from the course; ~3,690 L of irrigation water, see the water methodology above);
           a <a href="https://www.apple.com/environment/" target="_blank" rel="noopener">new smartphone (~70 kg, Apple)</a>
           needing <a href="https://www.compareandrecycle.co.uk/blog/world-water-week-how-much-water-does-your-smartphone-use" target="_blank" rel="noopener">~12,800 L</a>;
-          a <a href="https://www.levistrauss.com/wp-content/uploads/2015/03/Full-LCA-Results-Deck-FINAL.pdf" target="_blank" rel="noopener">pair of jeans (~33 kg, Levi's)</a>
-          at ~10,000 L (<a href="https://watercalculator.org/footprint/the-hidden-water-in-everyday-products/" target="_blank" rel="noopener">Water Footprint Network</a>).
+          jeans: 33 kg CO<sub>2</sub>e and 1,321 US gallons (about 5,000 L) in the displayed comparison bars, retained from <a href="https://andymasley.com/visuals/ai-prompt-footprint-source.txt" target="_blank" rel="noopener">Masley’s calculator source</a>. The water estimate’s blue-water boundary has not been independently verified here.
         </p>
         <p>
-          <strong>How the appliance figures are derived.</strong> The coffee, PS5, microwave, shower,
-          dishwasher, and dryer carbon numbers are each that item's measured electricity (cited
-          above) times the US grid (~0.38 kg CO<sub>2</sub>/kWh), so they fall on cleaner grids.
-          Two depend heavily on assumptions: a cup of coffee is
-          <a href="https://theconversation.com/coffee-heres-the-carbon-cost-of-your-daily-cup-and-how-to-make-it-climate-friendly-152629" target="_blank" rel="noopener">~0.05 kg black up to ~0.5 kg for a large latte</a>
-          (we use ~0.2 kg), and a 10-minute hot shower is roughly 0.2 kg on a gas water heater up to
-          1.5 kg on electric resistance (we use ~0.7 kg). Where a single authority does not exist,
-          figures are rounded mid-range estimates from the sources cited, not false precision.
+          <strong>Fixed everyday comparisons — calculator assumptions.</strong> These reference bars retain rounded scenario estimates from the original calculator, using the linked sources as context. They do not change with the selected grid or activity inputs. Legacy electricity-based examples use an assumed US grid factor of 0.38 kg/kWh; the revised AC example uses the fixed 2025 US value of 0.38440 kg/kWh; coffee and product figures use broader life-cycle estimates. Shower heating, appliance loads, commute water, and workplace examples are calculator scenarios, not measured personal use. Treat these as approximate scale comparisons, not like-for-like measurements.
         </p>
+        <p><strong>Calculations scaled from Masley.</strong> Our 20-page report comparison scales the book estimates in <a href="https://andymasley.com/visuals/ai-prompt-footprint-source.txt" target="_blank" rel="noopener">Masley’s source</a>: carbon = 2.7 kg × 20/400 pages = 0.135 kg CO<sub>2</sub>e; water = 5 US gallons × 20/300 pages ≈ 0.33 gallon. The original carbon and water examples use different book lengths; scaling assumes proportional impact per page and retains their source limitations. Our 10-mile commute carbon scales Masley’s 0.40 kg/mile reference: 10 × 0.40 = 4 kg CO<sub>2</sub>e. Coding-project estimates scale Masley’s retained model records using our line-to-token assumptions. Annual and company scenarios further multiply the applicable daily totals by 365 and the entered headcount.</p>
+        <p><strong>Air conditioning — chosen 2 kW example.</strong> We use the 2,000 W central-air-conditioner example from <a href="https://www.integrityacservice.com/about/blog/how-much-power-does-an-air-conditioner-really-use/" target="_blank" rel="noopener">Integrity Services’ Example Calculation</a>. One hour of continuous operation uses 2 kWh. Our derived carbon is 2 × 0.38440 = 0.7688 kg CO<sub>2</sub>e, using the fixed 2025 US grid factor cited above. Electricity-generation water is 2 × 0.47 = 0.94 US gallon using the historical NREL factor cited below. This whole-unit example is not a measured office average or a per-person allocation; thermostat cycling and equipment vary. The comparison remains one hour, so the article’s eight-hour day, monthly duration, and electricity price do not enter these carbon/water calculations.</p>
+        <p><strong>Commute water — back-of-the-envelope estimate.</strong> The fixed 10-mile round-trip commute uses an illustrative 0.15 US gallon water estimate. This is a calculator assumption, not a measured or independently verified research result. Its original fuel-use and water-intensity inputs are undocumented, so the derivation and accounting boundary cannot be verified. It stays fixed when the selected electricity grid changes.</p>
         <p>
           <strong>Water comparisons (blue water).</strong> The water charts use the
-          <strong>blue</strong> (freshwater) component only, and deliberately skip food for these
-          comparisons — everyone needs to eat, but nobody needs a cigarette, a cut flower, or a
-          round of golf. A disposable plastic water bottle takes roughly its own volume again in
-          production water beyond what's inside it
+          blue-water estimates where available, alongside retained references with broader or unverified accounting boundaries. These are not uniformly blue-water-only comparisons. Pacific Institute estimates two liters of production water beyond the contents for each liter of bottled water (three liters including the contents)
           (<a href="https://pacinst.org/wp-content/uploads/2013/02/bottled_water_and_energy3.pdf" target="_blank" rel="noopener">Pacific Institute</a>).
           A cigarette's water footprint is about 3.7 L across its whole supply chain
           (<a href="https://pubs.acs.org/doi/10.1021/acs.est.8b01533" target="_blank" rel="noopener">Environmental Science &amp; Technology, 2018</a>;
@@ -422,32 +430,23 @@ const structuredData = [
           published). An imported cut rose consumes about 4 L of blue irrigation water per stem on
           Kenya's flower farms
           (<a href="https://www.waterfootprint.org/resources/Report45-WaterFootprint-Flowers-Kenya.pdf" target="_blank" rel="noopener">Water Footprint Network, Report 45</a>).
-          A glass of beer (~75 L total) and a 125 mL glass of wine (~110 L total) are shown at their
-          blue share only, using wine grapes' global blue-water fraction of about 16%
-          (<a href="https://www.waterfootprint.org/resources/Mekonnen-Hoekstra-2011-WaterFootprintCrops.pdf" target="_blank" rel="noopener">Mekonnen &amp; Hoekstra 2011</a>)
-          as a stand-in for both. A cotton T-shirt (~1,500 L of its 2,700 L total is blue), a pair of
-          jeans (~5,000 L), and a
+          A cotton T-shirt (~1,500 L of its 2,700 L total is blue), a pair of
+          jeans (<a href="https://andymasley.com/visuals/ai-prompt-footprint-source.txt" target="_blank" rel="noopener">Masley’s retained ~5,000 L estimate</a>, water boundary unverified), and a
           <a href="https://www.compareandrecycle.co.uk/blog/world-water-week-how-much-water-does-your-smartphone-use" target="_blank" rel="noopener">new smartphone</a>
-          (mostly ultrapure freshwater) round out the manufactured goods. A round of golf is
-          estimated by dividing the golf industry's own reported irrigation total — about 1.63
-          million acre-feet (531 billion gallons) applied to US courses in 2024
-          (<a href="https://www.gcsaa.org/docs/default-source/environment/22_waterreport_web.pdf" target="_blank" rel="noopener">GCSAA</a>)
-          — by the 545 million rounds played that year
-          (<a href="https://www.ngf.org/full-shots/rounds-played-summary-for-2024-play-now-available/" target="_blank" rel="noopener">National Golf Foundation</a>),
-          for roughly 975 gallons of irrigation water per round. The savings come from cutting
+          round out the manufactured goods. The savings come from cutting
           irrigated products (a few fewer cotton clothes) and outdoor watering: a typical lawn
           drinks roughly 20,000 gal of freshwater a year, so letting it go unwatered or replacing it
           with native plants saves most of that
           (<a href="https://www.epa.gov/watersense/landscaping-tips" target="_blank" rel="noopener">EPA WaterSense</a>).
           Energy and manufactured goods have a blue-water cost too: thermoelectric power plants
-          evaporate about
-          <a href="https://www.nrel.gov/docs/fy11osti/50900.pdf" target="_blank" rel="noopener">0.47 gal of freshwater per kWh</a>
-          (NREL, cooling/consumption only), so an hour of central air conditioning (~3 kWh) consumes
-          roughly 1.4 gal and a day of the
+          are modeled here using a historical U.S. thermoelectric consumption factor of
+          <a href="https://www.nlr.gov/docs/fy04osti/33905.pdf" target="_blank" rel="noopener">0.47 gal of freshwater per kWh</a>
+          (NREL 2003, using 1995 data; cooling consumption only, not a current local-grid measurement), so our chosen hour of central air conditioning (2 kWh) consumes
+          0.94 gal and a day of the
           <a href="https://www.eia.gov/tools/faqs/faq.php?id=97" target="_blank" rel="noopener">average US home's electricity (~29 kWh)</a>
           about 14 gal — the very same power-plant cooling water that makes up much of AI's footprint.
           Printing a 300-page book uses on the order of ~5 gal of process freshwater
-          (<a href="https://waterfootprint.org/resources/Report64-WaterFootprint-Paper.pdf" target="_blank" rel="noopener">paper's water footprint</a>
+          (<a href="https://waterfootprint.org/resources/Report46-WaterFootprintPaper.pdf" target="_blank" rel="noopener">paper's water footprint</a>
           is mostly rain on trees, with the blue mill water lower since most is returned to rivers).
         </p>
       </div>
@@ -491,28 +490,6 @@ const structuredData = [
       <span>To the extent possible under law, Andrew Masley has waived all copyright and related or neighboring rights to this work. It is dedicated to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener license">CC0 1.0</a>.</span>
     </p>
 
-    </div>
-
-    <div id="aipf-tab-water" class="aipf-tabpanel" role="tabpanel" aria-labelledby="aipf-pagetab-water" hidden>
-      <p class="aipf-dek">
-        A companion piece by the same author: how AI's water use compares against data centers,
-        industries, farms, cities, and lawns — not per prompt, but at the scale of whole systems.
-        This is <a href="https://andymasley.com/visuals/water/" target="_blank" rel="noopener">Andy Masley's own page</a>,
-        shown below in an embedded frame. Unlike the calculator above, this one is his own
-        copyrighted work rather than public domain, so it's framed here rather than copied in.
-      </p>
-      <div class="aipf-water-embed">
-        <iframe
-          id="aipf-water-iframe"
-          data-src="https://andymasley.com/visuals/water/"
-          title="How Thirsty is AI? — water use comparison by Andy Masley"
-          loading="lazy"
-        ></iframe>
-      </div>
-      <p class="aipf-fine">
-        Having trouble viewing it here? <a href="https://andymasley.com/visuals/water/" target="_blank" rel="noopener">Open it directly on andymasley.com</a>.
-      </p>
-    </div>
   </article>
 </Base>
 
@@ -520,7 +497,7 @@ const structuredData = [
   (function () {
     'use strict';
 
-    // ---- Data: per-prompt model impacts from EcoLogits v0.10 (mean + 95% range) ----
+    // ---- Retained Masley model records; upstream 95% interval interpretation unverified ----
     const MODELS = [{"id":"gpt-5.5","name":"GPT-5.5","group":"OpenAI","sizes":{"tweet":{"wh":0.4064,"whmin":0.2917,"whmax":0.5212,"emb":0.0241,"embmin":0.0241,"embmax":0.0241,"ml":1.4658,"mlmin":1.0518,"mlmax":1.8797},"email":{"wh":1.1791,"whmin":0.7888,"whmax":1.5694,"emb":0.0395,"embmin":0.0395,"embmax":0.0395,"ml":4.2522,"mlmin":2.8447,"mlmax":5.6597},"summary":{"wh":1.6942,"whmin":1.1203,"whmax":2.2682,"emb":0.0498,"embmin":0.0498,"embmax":0.0498,"ml":6.1098,"mlmin":4.0399,"mlmax":8.1797},"chat":{"wh":2.6601,"whmin":1.7417,"whmax":3.5784,"emb":0.0692,"embmin":0.0692,"embmax":0.0692,"ml":9.5929,"mlmin":6.2811,"mlmax":12.9047},"report":{"wh":32.279,"whmin":20.7997,"whmax":43.7584,"emb":0.6622,"embmin":0.6622,"embmax":0.6622,"ml":116.4068,"mlmin":75.0091,"mlmax":157.8045},"long":{"wh":96.6681,"whmin":62.23,"whmax":131.1063,"emb":1.9514,"embmin":1.9514,"embmax":1.9514,"ml":348.611,"mlmin":224.4178,"mlmax":472.8041},"agent":{"wh":644.1723,"whmin":414.5847,"whmax":873.76,"emb":12.9507,"embmin":12.9507,"embmax":12.9507,"ml":2323.0577,"mlmin":1495.103,"mlmax":3151.012},"novel":{"wh":3219.5382,"whmin":2071.5998,"whmax":4367.4766,"emb":64.4772,"embmin":64.4772,"embmax":64.4772,"ml":11610.5134,"mlmin":7470.7415,"mlmax":15750.2854}}},{"id":"gpt-5.5-pro","name":"GPT-5.5 Pro","group":"OpenAI","sizes":{"tweet":{"wh":20.758,"whmin":15.2479,"whmax":26.2681,"emb":2.063,"embmin":2.063,"embmax":2.063,"ml":74.859,"mlmin":54.9881,"mlmax":94.7299},"email":{"wh":48.4781,"whmin":29.7437,"whmax":67.2124,"emb":2.4102,"embmin":2.4102,"embmax":2.4102,"ml":174.8249,"mlmin":107.2638,"mlmax":242.386},"summary":{"wh":66.9581,"whmin":39.4076,"whmax":94.5086,"emb":2.6417,"embmin":2.6417,"embmax":2.6417,"ml":241.4689,"mlmin":142.1143,"mlmax":340.8234},"chat":{"wh":101.6082,"whmin":57.5274,"whmax":145.689,"emb":3.0757,"embmin":3.0757,"embmax":3.0757,"ml":366.4263,"mlmin":207.459,"mlmax":525.3935},"report":{"wh":1164.2105,"whmin":613.2001,"whmax":1715.2209,"emb":16.3859,"embmin":16.3859,"embmax":16.3859,"ml":4198.4535,"mlmin":2211.363,"mlmax":6185.5441},"long":{"wh":3474.2155,"whmin":1821.1842,"whmax":5127.2468,"emb":45.3211,"embmin":45.3211,"embmax":45.3211,"ml":12528.9476,"mlmin":6567.676,"mlmax":18490.2193},"agent":{"wh":23130.7433,"whmin":12110.535,"whmax":34150.952,"emb":295.7463,"embmin":295.7463,"embmax":295.7463,"ml":83415.629,"mlmin":43673.818,"mlmax":123157.44},"novel":{"wh":115509.4586,"whmin":60408.4155,"whmax":170610.5016,"emb":1448.6776,"embmin":1448.6776,"embmax":1448.6776,"ml":416557.9101,"mlmin":217848.8553,"mlmax":615266.9648}}},{"id":"gpt-5.4-mini","name":"GPT-5.4 mini","group":"OpenAI","sizes":{"tweet":{"wh":0.041,"whmin":0.0108,"whmax":0.0711,"emb":0.0011,"embmin":0.0004,"embmax":0.0018,"ml":0.1477,"mlmin":0.039,"mlmax":0.2564},"email":{"wh":0.133,"whmin":0.0342,"whmax":0.2317,"emb":0.0024,"embmin":0.001,"embmax":0.0039,"ml":0.4795,"mlmin":0.1234,"mlmax":0.8356},"summary":{"wh":0.1943,"whmin":0.0498,"whmax":0.3388,"emb":0.0033,"embmin":0.0013,"embmax":0.0053,"ml":0.7008,"mlmin":0.1798,"mlmax":1.2217},"chat":{"wh":0.3093,"whmin":0.0791,"whmax":0.5395,"emb":0.005,"embmin":0.002,"embmax":0.008,"ml":1.1155,"mlmin":0.2854,"mlmax":1.9457},"report":{"wh":3.8366,"whmin":0.9771,"whmax":6.6961,"emb":0.0563,"embmin":0.0225,"embmax":0.0901,"ml":13.8358,"mlmin":3.5236,"mlmax":24.148},"long":{"wh":11.5045,"whmin":2.9291,"whmax":20.08,"emb":0.1678,"embmin":0.0671,"embmax":0.2684,"ml":41.4884,"mlmin":10.5631,"mlmax":72.4137},"agent":{"wh":76.688,"whmin":19.524,"whmax":133.8523,"emb":1.1167,"embmin":0.4467,"embmax":1.7867,"ml":276.558,"mlmin":70.4083,"mlmax":482.7073},"novel":{"wh":383.3997,"whmin":97.6029,"whmax":669.1964,"emb":5.5745,"embmin":2.2298,"embmax":8.9193,"ml":1382.6414,"mlmin":351.9819,"mlmax":2413.3008}}},{"id":"claude-opus-4-8","name":"Claude Opus 4.8","group":"Anthropic","sizes":{"tweet":{"wh":0.2673,"whmin":0.1938,"whmax":0.3408,"emb":0.013,"embmin":0.013,"embmax":0.013,"ml":0.9982,"mlmin":0.6301,"mlmax":1.3662},"email":{"wh":0.818,"whmin":0.5701,"whmax":1.0659,"emb":0.0238,"embmin":0.0238,"embmax":0.0238,"ml":3.0632,"mlmin":1.8537,"mlmax":4.2727},"summary":{"wh":1.1852,"whmin":0.821,"whmax":1.5493,"emb":0.0309,"embmin":0.0309,"embmax":0.0309,"ml":4.4398,"mlmin":2.6693,"mlmax":6.2103},"chat":{"wh":1.8735,"whmin":1.2914,"whmax":2.4557,"emb":0.0444,"embmin":0.0444,"embmax":0.0444,"ml":7.0211,"mlmin":4.1987,"mlmax":9.8434},"report":{"wh":22.9837,"whmin":15.7164,"whmax":30.2509,"emb":0.4575,"embmin":0.4575,"embmax":0.4575,"ml":86.179,"mlmin":51.0998,"mlmax":121.2581},"long":{"wh":68.8752,"whmin":47.0752,"whmax":90.6752,"emb":1.3555,"embmin":1.3555,"embmax":1.3555,"ml":258.2614,"mlmin":153.0588,"mlmax":363.464},"agent":{"wh":459.042,"whmin":313.7117,"whmax":604.3727,"emb":9.0083,"embmin":9.0083,"embmax":9.0083,"ml":1721.2837,"mlmin":1019.991,"mlmax":2422.5763},"novel":{"wh":2294.617,"whmin":1567.9779,"whmax":3021.256,"emb":44.9079,"embmin":44.9079,"embmax":44.9079,"ml":8604.2603,"mlmin":5098.0702,"mlmax":12110.4504}}},{"id":"claude-sonnet-4-6","name":"Claude Sonnet 4.6","group":"Anthropic","sizes":{"tweet":{"wh":0.1135,"whmin":0.0886,"whmax":0.1384,"emb":0.0072,"embmin":0.0072,"embmax":0.0072,"ml":0.4214,"mlmin":0.2881,"mlmax":0.5547},"email":{"wh":0.3424,"whmin":0.2588,"whmax":0.426,"emb":0.0148,"embmin":0.0148,"embmax":0.0148,"ml":1.2745,"mlmin":0.8414,"mlmax":1.7077},"summary":{"wh":0.495,"whmin":0.3722,"whmax":0.6178,"emb":0.0198,"embmin":0.0198,"embmax":0.0198,"ml":1.8433,"mlmin":1.2102,"mlmax":2.4764},"chat":{"wh":0.7811,"whmin":0.5849,"whmax":0.9773,"emb":0.0292,"embmin":0.0292,"embmax":0.0292,"ml":2.9097,"mlmin":1.9018,"mlmax":3.9176},"report":{"wh":9.5558,"whmin":7.1079,"whmax":12.0038,"emb":0.3186,"embmin":0.3186,"embmax":0.3186,"ml":35.6133,"mlmin":23.1103,"mlmax":48.1162},"long":{"wh":28.6313,"whmin":21.2882,"whmax":35.9744,"emb":0.9476,"embmin":0.9476,"embmax":0.9476,"ml":106.708,"mlmin":69.2157,"mlmax":144.2002},"agent":{"wh":190.8147,"whmin":141.8623,"whmax":239.7673,"emb":6.3037,"embmin":6.3037,"embmax":6.3037,"ml":711.1667,"mlmin":461.246,"mlmax":961.0873},"novel":{"wh":953.79,"whmin":709.0334,"whmax":1198.5467,"emb":31.4554,"embmin":31.4554,"embmax":31.4554,"ml":3554.8002,"mlmin":2305.3271,"mlmax":4804.2734}}},{"id":"claude-haiku-4-5-20251001","name":"Claude Haiku 4.5","group":"Anthropic","sizes":{"tweet":{"wh":0.0062,"whmin":0.0035,"whmax":0.0089,"emb":0.0003,"embmin":0.0002,"embmax":0.0004,"ml":0.0236,"mlmin":0.0114,"mlmax":0.0358},"email":{"wh":0.0194,"whmin":0.0107,"whmax":0.028,"emb":0.0007,"embmin":0.0005,"embmax":0.001,"ml":0.0735,"mlmin":0.0349,"mlmax":0.1121},"summary":{"wh":0.0281,"whmin":0.0156,"whmax":0.0407,"emb":0.001,"embmin":0.0007,"embmax":0.0014,"ml":0.1068,"mlmin":0.0506,"mlmax":0.163},"chat":{"wh":0.0446,"whmin":0.0246,"whmax":0.0645,"emb":0.0015,"embmin":0.001,"embmax":0.002,"ml":0.1693,"mlmin":0.0801,"mlmax":0.2585},"report":{"wh":0.5485,"whmin":0.3023,"whmax":0.7946,"emb":0.0173,"embmin":0.0116,"embmax":0.0231,"ml":2.084,"mlmin":0.9829,"mlmax":3.1851},"long":{"wh":1.6439,"whmin":0.9059,"whmax":2.3818,"emb":0.0517,"embmin":0.0344,"embmax":0.0689,"ml":6.2465,"mlmin":2.9455,"mlmax":9.5474},"agent":{"wh":10.9567,"whmin":6.038,"whmax":15.8757,"emb":0.344,"embmin":0.2293,"embmax":0.4587,"ml":41.634,"mlmin":19.6317,"mlmax":63.6363},"novel":{"wh":54.7726,"whmin":30.1826,"whmax":79.3626,"emb":1.717,"embmin":1.1447,"embmax":2.2894,"ml":208.1266,"mlmin":98.1348,"mlmax":318.1184}}},{"id":"gemini-3.1-pro-preview","name":"Gemini 3.1 Pro","group":"Google","sizes":{"tweet":{"wh":0.8453,"whmin":0.607,"whmax":1.0837,"emb":0.0521,"embmin":0.0521,"embmax":0.0521,"ml":3.4225,"mlmin":2.4575,"mlmax":4.3874},"email":{"wh":2.4033,"whmin":1.5929,"whmax":3.2136,"emb":0.0693,"embmin":0.0693,"embmax":0.0693,"ml":9.73,"mlmin":6.4492,"mlmax":13.0107},"summary":{"wh":3.4419,"whmin":2.2502,"whmax":4.6336,"emb":0.0807,"embmin":0.0807,"embmax":0.0807,"ml":13.9349,"mlmin":9.1103,"mlmax":18.7596},"chat":{"wh":5.3893,"whmin":3.4827,"whmax":7.296,"emb":0.1021,"embmin":0.1021,"embmax":0.1021,"ml":21.8193,"mlmin":14.0999,"mlmax":29.5387},"report":{"wh":65.1103,"whmin":41.2769,"whmax":88.9437,"emb":0.7585,"embmin":0.7585,"embmax":0.7585,"ml":263.6065,"mlmin":167.1144,"mlmax":360.0987},"long":{"wh":194.9386,"whmin":123.4384,"whmax":266.4387,"emb":2.1854,"embmin":2.1854,"embmax":2.1854,"ml":789.2309,"mlmin":499.7544,"mlmax":1078.7075},"agent":{"wh":1298.9363,"whmin":822.2687,"whmax":1775.604,"emb":14.4193,"embmin":14.4193,"embmax":14.4193,"ml":5258.8917,"mlmin":3329.048,"mlmax":7188.7353},"novel":{"wh":6491.6081,"whmin":4108.2694,"whmax":8874.9469,"emb":71.392,"embmin":71.392,"embmax":71.392,"ml":26282.014,"mlmin":16632.7959,"mlmax":35931.2321}}},{"id":"gemini-3.5-flash","name":"Gemini 3.5 Flash","group":"Google","sizes":{"tweet":{"wh":0.305,"whmin":0.2305,"whmax":0.3795,"emb":0.0162,"embmin":0.0162,"embmax":0.0162,"ml":1.2348,"mlmin":0.9333,"mlmax":1.5364},"email":{"wh":0.8888,"whmin":0.6355,"whmax":1.142,"emb":0.0209,"embmin":0.0209,"embmax":0.0209,"ml":3.5982,"mlmin":2.573,"mlmax":4.6234},"summary":{"wh":1.2779,"whmin":0.9055,"whmax":1.6503,"emb":0.0241,"embmin":0.0241,"embmax":0.0241,"ml":5.1738,"mlmin":3.6661,"mlmax":6.6815},"chat":{"wh":2.0076,"whmin":1.4118,"whmax":2.6035,"emb":0.0301,"embmin":0.0301,"embmax":0.0301,"ml":8.1281,"mlmin":5.7158,"mlmax":10.5404},"report":{"wh":24.3849,"whmin":16.937,"whmax":31.8328,"emb":0.2136,"embmin":0.2136,"embmax":0.2136,"ml":98.7251,"mlmin":68.5713,"mlmax":128.8789},"long":{"wh":73.0312,"whmin":50.6874,"whmax":95.375,"emb":0.6124,"embmin":0.6124,"embmax":0.6124,"ml":295.6751,"mlmin":205.2137,"mlmax":386.1366},"agent":{"wh":486.6687,"whmin":337.71,"whmax":635.6273,"emb":4.0353,"embmin":4.0353,"embmax":4.0353,"ml":1970.334,"mlmin":1367.258,"mlmax":2573.41},"novel":{"wh":2432.3763,"whmin":1687.583,"whmax":3177.1697,"emb":19.9542,"embmin":19.9542,"embmax":19.9542,"ml":9847.7523,"mlmin":6832.3716,"mlmax":12863.1329}}},{"id":"gemini-3.1-flash-lite","name":"Gemini 3.1 Flash-Lite","group":"Google","sizes":{"tweet":{"wh":0.0159,"whmin":0.0045,"whmax":0.0273,"emb":0.0008,"embmin":0.0003,"embmax":0.0012,"ml":0.0644,"mlmin":0.0182,"mlmax":0.1105},"email":{"wh":0.0478,"whmin":0.0128,"whmax":0.0827,"emb":0.0012,"embmin":0.0005,"embmax":0.0019,"ml":0.1933,"mlmin":0.0517,"mlmax":0.335},"summary":{"wh":0.069,"whmin":0.0183,"whmax":0.1197,"emb":0.0015,"embmin":0.0006,"embmax":0.0024,"ml":0.2793,"mlmin":0.074,"mlmax":0.4846},"chat":{"wh":0.1088,"whmin":0.0286,"whmax":0.189,"emb":0.002,"embmin":0.0008,"embmax":0.0032,"ml":0.4405,"mlmin":0.1159,"mlmax":0.7652},"report":{"wh":1.3299,"whmin":0.3458,"whmax":2.3141,"emb":0.0182,"embmin":0.0073,"embmax":0.0292,"ml":5.3844,"mlmin":1.3999,"mlmax":9.369},"long":{"wh":3.9846,"whmin":1.0352,"whmax":6.9339,"emb":0.0535,"embmin":0.0214,"embmax":0.0856,"ml":16.1321,"mlmin":4.1913,"mlmax":28.0729},"agent":{"wh":26.5553,"whmin":6.898,"whmax":46.2123,"emb":0.3547,"embmin":0.142,"embmax":0.5673,"ml":107.5117,"mlmin":27.9277,"mlmax":187.0957},"novel":{"wh":132.7348,"whmin":34.4741,"whmax":230.9956,"emb":1.7636,"embmin":0.7054,"embmax":2.8218,"ml":537.3921,"mlmin":139.5723,"mlmax":935.2119}}}];
 
     const SIZES = [
@@ -538,8 +515,6 @@ const structuredData = [
       const o = SIZE_LABEL_OVERRIDES[modelId];
       return (o && o[s.id]) ? o[s.id] : s.label;
     }
-    const WPM = 238;
-    const TOKENS_PER_WORD = 0.75;
     const TOKENS_PER_LINE = 10;   // rough tokens per line of code
     const CODE_FRACTION = 0.15;   // only ~15% of an agent session's output is final code; the rest is reasoning, tool calls, file exploration, and explanation (wide uncertainty)
 
@@ -549,54 +524,21 @@ const structuredData = [
       ['gemini-3.5-flash', 'summary', 4],
     ];
 
-    const WORLD_GRID = 480; // global-average grid carbon intensity, g CO2e/kWh (Ember)
-    // location = regional baseline for goods, services, shared infrastructure
-    // (home energy and driving are separate knobs below, so they are excluded here)
-    // w = BLUE water footprint per capita (freshwater from rivers/lakes/aquifers),
-    // gal/yr; green rainwater excluded. The full blue footprint sits on "location";
-    // home/diet water are folded in (set to 0) to avoid double-counting.
+    const WORLD_GRID = 458.29; // 2025 lifecycle electricity-generation intensity, g CO2e/kWh (OWID/Ember)
+    // Location controls electricity carbon intensity only, not a personal footprint.
     const LOCATIONS = [
-      { id: 'us',    label: 'the US',    c: 3000, w: 119000, grid: 380 },
-      { id: 'eu',    label: 'the EU',    c: 1800, w: 66000,  grid: 215 },
-      { id: 'uk',    label: 'the UK',    c: 1700, w: 45000,  grid: 125 },
-      { id: 'cn',    label: 'China',     c: 2500, w: 79000,  grid: 580 },
-      { id: 'in',    label: 'India',     c: 900,  w: 106000, grid: 700 },
-      { id: 'world', label: 'the world', c: 1800, w: 40000,  grid: WORLD_GRID },
+      { id: 'us', label: 'the US', grid: 384.40 },
+      { id: 'eu', label: 'the EU (27 countries)', grid: 209.897 },
+      { id: 'uk', label: 'the UK', grid: 217.41 },
+      { id: 'cn', label: 'China', grid: 525.34 },
+      { id: 'in', label: 'India', grid: 670.13 },
+      { id: 'world', label: 'the world', grid: WORLD_GRID },
     ];
-    const HOMES = [
-      { id: 'apt', label: 'a small apartment', c: 1500, w: 0 },
-      { id: 'med', label: 'a medium home',     c: 3500, w: 0 },
-      { id: 'big', label: 'a big house',       c: 7000, w: 0 },
-    ];
-    const DRIVING = [
-      { id: 'd0',   label: 'not at all',        c: 0,     w: 0 },
-      { id: 'dlo',  label: 'a little',          c: 1200,  w: 0 },
-      { id: 'davg', label: 'an average amount', c: 4800,  w: 0 },
-      { id: 'dhi',  label: 'a lot',             c: 10000, w: 0 },
-    ];
-    // Diet water (w) set to 0: on a blue-water basis the personal footprint is
-    // dominated by irrigated agriculture and counted in the regional figure above.
-    const DIETS = [
-      { id: 'heavy', label: 'a lot of meat',   c: 3200, w: 0 },
-      { id: 'avg',   label: 'an average diet', c: 2500, w: 0 },
-      { id: 'light', label: 'little meat',     c: 2000, w: 0 },
-      { id: 'pesc',  label: 'a pescatarian diet', c: 1700, w: 0 },
-      { id: 'veg',   label: 'a vegetarian diet',  c: 1500, w: 0 },
-      { id: 'vegan', label: 'a vegan diet',    c: 1050, w: 0 },
-    ];
-    const FLYING = [
-      { id: 'never', label: 'never',     c: 0,    w: 0 },
-      { id: 'rare',  label: 'rarely',    c: 560,  w: 0 },
-      { id: 'some',  label: 'sometimes', c: 2300, w: 0 },
-      { id: 'often', label: 'often',     c: 8000, w: 0 },
-    ];
-    // Typical diet by region; the diet default follows the country you pick.
-    const COUNTRY_DIET = { us: 'avg', eu: 'light', uk: 'avg', cn: 'light', in: 'light', world: 'light' };
 
     // Sources cited in the generated report (footnote order).
     const REPORT_REFS = [
       { url: 'https://ecologits.ai/', label: 'EcoLogits (v0.10) — per-prompt energy, carbon, and water for each model, behind the EcoLogits calculator.' },
-      { url: 'https://ember-energy.org/latest-insights/global-electricity-review-2024/', label: 'Ember, Global Electricity Review 2024, with Our World in Data — grid carbon intensity by region, used to cost the electricity.' },
+      { url: 'https://github.com/owid/energy-data/blob/master/owid-energy-data.csv', label: 'OWID energy dataset, sourced from Ember — 2025 lifecycle electricity-generation intensity (carbon_intensity_elec), g CO2e/kWh; retrieved September 26, 2026.' },
       { url: 'https://ourworldindata.org/co2-emissions', label: 'Our World in Data — consumption-based emissions, used for the regional baseline.' },
       { url: 'https://www.eia.gov/consumption/residential/', label: 'US EIA Residential Energy Consumption Survey, with Goldstein et al. 2020 (PNAS) — home energy.' },
       { url: 'https://www.epa.gov/greenvehicles/greenhouse-gas-emissions-typical-passenger-vehicle', label: 'US EPA (~400 g CO2 per vehicle-mile) and FHWA (annual mileage) — driving.' },
@@ -617,16 +559,11 @@ const structuredData = [
       { label: 'A dishwasher load',        c: 0.5,  w: 3.5 },
       { label: 'A dryer load',             c: 1.2,  w: 0.1 },
       { label: 'Printing a 400-page book', c: 2.7,  w: 300 },
-      { label: 'A round of golf',          c: 10.5, w: 3690 },
-      // Workplace comparisons (rough order-of-magnitude estimates, not sourced
-      // to the same rigor as the figures above): video call ~ Obringer et al.
-      // 2021 (an hour of videoconferencing: >=150 g CO2e, >=2 L water); report
-      // printing scaled from the book figure above; office AC uses the same
-      // ~3 kWh/hour and US grid (~0.38 kg/kWh) as the methodology section;
+      // Workplace comparisons: report printing scaled from the book figure above; office AC uses the same
+      // chosen 2 kW example and fixed 2025 US grid (0.38440 kg/kWh);
       // commute uses the page's own gas-car g/mile figure over 10 miles.
-      { label: 'An hour of a work video call',   c: 0.15, w: 0.53 },
       { label: 'Printing a 20-page work report', c: 0.135, w: 15 },
-      { label: 'An hour of office air conditioning', c: 1.14, w: 1.4 },
+      { label: 'An hour of central AC (2 kW example)', c: 0.7688, w: 0.94 },
       { label: 'A 10-mile round-trip commute',   c: 4.0,  w: 0.6 },
     ];
     // Annual reference points. dir: 'add' = emissions you cause, 'save' = a cut you make.
@@ -638,7 +575,6 @@ const structuredData = [
       { label: 'A year of daily coffee',          c: 77,   w: 0,      dir: 'add' },
       { label: 'A new sofa',                      c: 90,   w: 0,      dir: 'add' },
       { label: 'A new bicycle',                   c: 100,  w: 0,      dir: 'add' },
-      { label: 'A week-long cruise',              c: 800,  w: 0,      dir: 'add' },
       { label: 'A new laptop',                    c: 250,  w: 0,      dir: 'add' },
       { label: 'A short-haul round-trip flight',  c: 250,  w: 0,      dir: 'add' },
       { label: 'A new flat-screen TV',            c: 350,  w: 0,      dir: 'add' },
@@ -652,7 +588,6 @@ const structuredData = [
       { label: 'Switching to a hybrid car',       c: 480,  w: 0,      dir: 'save' },
       { label: 'Buying green electricity',        c: 1380, w: 0,      dir: 'save' },
       { label: 'Switching to an electric car',    c: 1380, w: 0,      dir: 'save' },
-      { label: 'Going vegetarian for a year',     c: 1000, w: 186000, dir: 'save' },
       { label: 'A deep retrofit of your home',    c: 1580, w: 0,      dir: 'save' },
       { label: 'Switching to green heating',      c: 1990, w: 0,      dir: 'save' },
       { label: 'Living car-free',                 c: 2400, w: 0,      dir: 'save' },
@@ -665,16 +600,12 @@ const structuredData = [
       { label: 'A disposable plastic water bottle', w: 0.3 },
       { label: 'A cigarette',             w: 1 },
       { label: 'A cut rose (imported)',   w: 1 },
-      { label: 'An hour of air conditioning', w: 1.4 },
+      { label: 'An hour of central AC (2 kW example)', w: 0.94 },
       { label: 'Printing a book',        w: 5 },
       { label: 'A day of home electricity',   w: 14 },
-      { label: 'A glass of beer',         w: 3.2 },
-      { label: 'A glass of wine',         w: 4.6 },
       { label: 'A dozen roses',           w: 12.7 },
       { label: 'A pack of cigarettes (20)', w: 19.5 },
-      { label: 'A round of golf (course irrigation)', w: 975 },
       // Workplace comparisons, same rough estimates as DAILY_ITEMS above.
-      { label: 'An hour of a work video call', w: 0.53 },
       { label: 'Printing a work report', w: 0.33 },
       { label: 'A 10-mile round-trip commute', w: 0.15 },
     ];
@@ -683,7 +614,6 @@ const structuredData = [
       { label: 'A cotton T-shirt',                 w: 396,    dir: 'add' },
       { label: 'A new pair of jeans',              w: 1321,   dir: 'add' },
       { label: 'A new smartphone',                 w: 3370,   dir: 'add' },
-      { label: 'Golfing once a week for a year',   w: 50700,  dir: 'add' },
       { label: 'Buying five fewer cotton garments (1 yr)', w: 2000, dir: 'save' },
       { label: 'Replacing a lawn with native plants', w: 15000, dir: 'save' },
       { label: 'Letting your lawn go unwatered (1 yr)', w: 20000, dir: 'save' },
@@ -691,42 +621,102 @@ const structuredData = [
 
     const GAL_TO_L = 3.785411784;
     const DAYS = 365;
+    const DEFAULT_ROUTER_WATTS = 6.5;
+    const MAX_ROUTER_WATTS = 1000; // input-sanity limit, not a measured device rating
+    const NREL_L_PER_KWH = 0.47 * GAL_TO_L;
+    const IMAGE_WH = 2.907;
+    const VIDEO_WH_LOW = 19.8, VIDEO_WH_MEAN = 30.8, VIDEO_WH_HIGH = 43.4;
+    const VIDEO_PUE = 1.09, VIDEO_REF_SECONDS = 8;
+
+    // Electricity factors are kWh per hour. Gaming retains both endpoints;
+    // no invented midpoint enters either its display or the activity total.
+    const ACTIVITIES = [
+      { id: 'streaming', label: 'Streaming', kwh: [0.077, 0.077], carbonPerHour: 36,
+        note: '<a href="https://www.iea.org/commentaries/the-carbon-footprint-of-streaming-video-fact-checking-the-headlines" target="_blank" rel="noopener">IEA (2020)</a>: 0.077 kWh and 36 g carbon per hour, using a 2019 global baseline. This dated estimate does not describe every device or today’s higher-resolution streaming. Carbon stays at the published global value when you change location.' },
+      { id: 'videoCall', label: 'Video calls', kwh: [0.049, 0.049],
+        note: '<a href="https://davidmytton.blog/zoom-video-conferencing-energy-and-emissions/" target="_blank" rel="noopener">David Mytton</a>: 0.049 kWh per hour, rounded from 0.0486 kWh for the network traffic of both participants in a one-to-one 1080p call, not one participant alone. This bandwidth-based estimate excludes device and data-center energy, so it likely undercounts. Group calls and camera settings differ; the author’s 2023 update cautions against using this method for present-day assessments. Carbon is our calculation from energy and your selected grid.' },
+      { id: 'gaming', label: 'Gaming', kwh: [0.160, 0.305],
+        note: '<a href="https://arxiv.org/abs/2608.19040" target="_blank" rel="noopener">Hot Games</a>: our assumed 160–305 W console-to-desktop-PC range; the paper reports a weighted PC figure of 305.1 W, while 160 W is our retained console scenario. This is a hardware range, not a statistical confidence interval; mobile gaming is excluded. Carbon is our calculation from energy and your selected grid.' },
+      { id: 'social', label: 'Social media', kwh: [15.81 * 60 * 3.7 / 1e6, 15.81 * 60 * 3.7 / 1e6],
+        note: 'Greenspector’s 2021 study reported TikTok battery draw of 15.81 mAh per minute on one Galaxy S7. Our assumed 3.7 V converts that to 3.50982 Wh per hour. Source note: the original Greenspector page is unavailable. The <a href="https://sas-dhrh.github.io/dhcc-toolkit/toolkit/working-practices.html" target="_blank" rel="noopener">Digital Humanities Climate Coalition toolkit</a> reproduces the 15.81 figure with an explicit one-minute unit, and <a href="https://cwrrr.org/resources/analysis-reviews/tis-the-season-to-be-worried-our-online-habits/" target="_blank" rel="noopener">CWR</a> also reproduces the figure. These corroborate the reported value; they are reproductions of the same study, not independent measurements. This phone-battery proxy excludes network, data-center, and charging losses; it is not a social-media-wide average. Carbon and water are our derivations.' },
+    ];
 
     let uidSeq = 1;
     // Shared state shape (Project 2 foundation checkpoint). `rows` is the
     // existing text-AI usage table; `images`/`videos`/`codingSessions` are new
     // AI-use entry types added alongside it; `activities`/`routerWatts` are the
     // separate digital-life and router comparisons (never AI-use totals).
-    // Each AI-use entry type (rows, images, videos, codingSessions) carries its
-    // own `retry` multiplier, added in the next checkpoint.
+    // Daily rows, images, and videos carry retries; project sessions do not.
     const state = {
       rows: [],
       images: [],
       videos: [],
       codingSessions: [],
       activities: { streaming: 0, videoCall: 0, gaming: 0, social: 0 },
-      routerWatts: 6.5,
-      metric: 'carbon', loc: 'us', home: 'med', drive: 'davg', diet: 'avg', fly: 'some', headcount: 300,
+      routerWatts: DEFAULT_ROUTER_WATTS,
+      pieBound: 'low',
+      metric: 'carbon', loc: 'us', headcount: 300,
     };
 
     let root = null;
     const getModel = (id) => MODELS.find((m) => m.id === id) || MODELS[0];
     const getLoc = () => LOCATIONS.find((x) => x.id === state.loc) || LOCATIONS[0];
 
-    // ---- Shared numeric parsing (Project 2 foundation checkpoint) ----
-    // Clamp a possibly-invalid numeric string to an integer in [min, max],
-    // falling back to `fallback` (not 0) so a cleared field doesn't silently
-    // zero out — matches the existing stepper's own clamping behavior.
+    // Validate the entire string before conversion; never turn malformed text
+    // into a different number. Bounds apply only to syntactically valid values.
     function clampInt(raw, min, max, fallback) {
-      const n = parseInt(String(raw).replace(/[^0-9]/g, ''), 10);
+      const value = String(raw).trim();
+      if (!/^\d+$/.test(value)) return fallback;
+      const n = Number(value);
+      if (!Number.isSafeInteger(n)) return fallback;
+      return Math.max(min, Math.min(max, n));
+    }
+    function clampFloat(raw, min, max, fallback) {
+      const value = String(raw).trim();
+      if (!/^(?:\d+(?:\.\d+)?|\.\d+)$/.test(value)) return fallback;
+      const n = Number(value);
       if (!Number.isFinite(n)) return fallback;
       return Math.max(min, Math.min(max, n));
     }
-    // Same, but for decimal inputs (durations, wattages, hours).
-    function clampFloat(raw, min, max, fallback) {
-      const n = parseFloat(raw);
-      if (!Number.isFinite(n)) return fallback;
-      return Math.max(min, Math.min(max, n));
+
+    let numericErrorSeq = 0;
+    function bindIntegerInput(input, min, max, getValue, setValue) {
+      bindNumericInput(input, min, max, getValue, setValue, clampInt, 'a whole number');
+    }
+    function bindDecimalInput(input, min, max, getValue, setValue) {
+      bindNumericInput(input, min, max, getValue, setValue, clampFloat, 'a number');
+    }
+    function bindNumericInput(input, min, max, getValue, setValue, parse, description) {
+      const error = document.createElement('span');
+      error.id = 'aipf-number-error-' + numericErrorSeq++;
+      error.className = 'aipf-number-error';
+      error.setAttribute('aria-live', 'polite');
+      error.hidden = true;
+      input.setAttribute('aria-describedby', error.id);
+      const clearError = () => {
+        error.hidden = true;
+        error.textContent = '';
+        input.removeAttribute('aria-invalid');
+      };
+      const commit = () => {
+        const value = parse(input.value, min, max, null);
+        if (value === null) {
+          if (!error.parentNode) (input.closest('.aipf-rowwrap') || input.parentElement).appendChild(error);
+          error.textContent = 'Enter ' + description + ' from ' + min + ' to ' + max + '. Still using ' + getValue() + '.';
+          error.hidden = false;
+          input.setAttribute('aria-invalid', 'true');
+          return;
+        }
+        clearError();
+        input.value = String(value);
+        setValue(value);
+      };
+      // Keep unfinished edits out of totals until blur or Enter.
+      input.addEventListener('input', clearError);
+      input.addEventListener('blur', commit);
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') { event.preventDefault(); commit(); }
+      });
     }
 
     // ---- Formatting ----
@@ -796,26 +786,97 @@ const structuredData = [
         const n = r.count * (r.retry || 1);
         a += n * t[0]; b += n * t[1]; c += n * t[2];
       }
+      for (const t of [imageDailyTriple(metric), videoDailyTriple(metric)]) {
+        a += t[0]; b += t[1]; c += t[2];
+      }
       return [a, b, c];
     }
     const aiDaily = (metric) => aiDailyTriple(metric)[0];
-    function aiDailyEnergy() { let t = 0; for (const r of state.rows) if (r.count) t += r.count * (r.retry || 1) * getModel(r.model).sizes[r.size].wh; return t; }
-    function dailyFootprint(metric) {
-      const loc = getLoc();
-      const home = HOMES.find((x) => x.id === state.home) || HOMES[1];
-      const drive = DRIVING.find((x) => x.id === state.drive) || DRIVING[2];
-      const diet = DIETS.find((x) => x.id === state.diet);
-      const fly = FLYING.find((x) => x.id === state.fly);
-      if (metric === 'carbon') return ((loc.c + home.c + drive.c + diet.c + fly.c) * 1000) / DAYS;
-      return ((loc.w + home.w + drive.w + diet.w + fly.w) * GAL_TO_L) / DAYS;
+    function aiDailyEnergy() { let t = 0; for (const r of state.rows) if (r.count) t += r.count * (r.retry || 1) * getModel(r.model).sizes[r.size].wh; for (const e of state.images) t += imageEntryValues(e).wh; for (const e of state.videos) t += videoEntryValues(e).wh; return t; }
+    // Media calculations use Wh, grams of CO2e, and liters. The video's
+    // point contribution uses the published mean, not the midpoint of its range.
+    function imageEntryValues(entry) {
+      const wh = entry.count > 0 ? entry.count * entry.retry * IMAGE_WH : 0;
+      return { wh, carbon: wh / 1000 * getLoc().grid, water: wh / 1000 * NREL_L_PER_KWH };
     }
-    function itemBase(item, metric) { return metric === 'carbon' ? item.c * 1000 : item.w * GAL_TO_L; }
+    function videoEntryValues(entry) {
+      const scale = entry.count > 0 && entry.duration > 0 ? entry.count * entry.retry * entry.duration / VIDEO_REF_SECONDS * VIDEO_PUE : 0;
+      const wh = scale * VIDEO_WH_MEAN, whLow = scale * VIDEO_WH_LOW, whHigh = scale * VIDEO_WH_HIGH;
+      return { wh, whLow, whHigh, carbon: wh / 1000 * getLoc().grid,
+        carbonLow: whLow / 1000 * getLoc().grid, carbonHigh: whHigh / 1000 * getLoc().grid,
+        water: wh / 1000 * NREL_L_PER_KWH };
+    }
+    function imageDailyTriple(metric) {
+      const total = state.images.reduce((sum, entry) => sum + imageEntryValues(entry)[metric], 0);
+      return [total, total, total];
+    }
+    function videoDailyTriple(metric) {
+      return state.videos.reduce((total, entry) => {
+        const v = videoEntryValues(entry);
+        return [total[0] + v[metric], total[1] + (metric === 'carbon' ? v.carbonLow : v.water),
+          total[2] + (metric === 'carbon' ? v.carbonHigh : v.water)];
+      }, [0, 0, 0]);
+    }
+    function usagePhrase() {
+      const categories = [[totalPrompts(), 'prompt'],
+        [state.images.reduce((n, e) => n + e.count, 0), 'image'],
+        [state.videos.reduce((n, e) => n + (e.duration > 0 ? e.count : 0), 0), 'video clip']];
+      return categories.filter(([n]) => n > 0).map(([n, label]) => n.toLocaleString('en-US') + ' ' + label + (n === 1 ? '' : 's')).join(' and ');
+    }
 
-    function dailyWords() {
-      let n = 0;
-      for (const r of state.rows) if (r.count) n += r.count * (r.retry || 1) * (SIZES.find((s) => s.id === r.size) || { w: 0 }).w;
-      return n;
+    function activityValues(id) {
+      const activity = ACTIVITIES.find((a) => a.id === id);
+      const hours = state.activities[id];
+      const kwh = activity.kwh.map((factor) => hours * factor);
+      const carbon = activity.carbonPerHour === undefined
+        ? kwh.map((value) => value * getLoc().grid)
+        : [hours * activity.carbonPerHour, hours * activity.carbonPerHour];
+      return { kwh, carbon, water: kwh.map((value) => value * NREL_L_PER_KWH) };
     }
+    function digitalLifeTotals() {
+      const total = { kwh: [0, 0], carbon: [0, 0], water: [0, 0] };
+      for (const activity of ACTIVITIES) {
+        const values = activityValues(activity.id);
+        for (const metric of ['kwh', 'carbon', 'water']) {
+          total[metric][0] += values[metric][0]; total[metric][1] += values[metric][1];
+        }
+      }
+      return total;
+    }
+    function formatPair(pair, format, scale = 1) {
+      const low = format(pair[0] * scale);
+      return pair[0] === pair[1] ? low : low + '–' + format(pair[1] * scale);
+    }
+    function activitySummary(values, scale, carbonLabel = 'carbon') {
+      return formatPair(values.kwh, (kwh) => fmtEnergy(kwh * 1000), scale) + '; ' +
+        formatPair(values.carbon, fmtCarbon, scale) + ' ' + carbonLabel + '; ' +
+        formatPair(values.water, fmtWater, scale) + ' derived water.';
+    }
+    function digitalComparisonRows(scale = 1) {
+      return ACTIVITIES.map((activity) => {
+        const pair = activityValues(activity.id)[state.metric].map((value) => value * scale);
+        return { label: activity.label + ' (' + state.activities[activity.id] + ' h/day)',
+          v: pair[1], low: pair[0], high: pair[1], digital: true };
+      });
+    }
+
+    function routerValues() {
+      const kwh = state.routerWatts * 24 / 1000;
+      return { kwh, carbon: kwh * getLoc().grid, water: kwh * NREL_L_PER_KWH };
+    }
+    function routerComparisonRow(scale = 1) {
+      return { label: 'Router (' + state.routerWatts + ' W, 24 h/day)',
+        v: routerValues()[state.metric] * scale, router: true };
+    }
+
+    // A whole-project comparison: never multiply by days or pie selection.
+    function projectComparisonRows() {
+      if (!state.codingSessions.some((session) => session.lines > 0)) return [];
+      return [{ label: 'Coding — whole project (all sessions)',
+        v: codingProjectTotals()[state.metric], project: true }];
+    }
+
+    function itemBase(item, metric) { return metric === 'carbon' ? item.c * 1000 : item.w * GAL_TO_L; }
 
     // ---- Coding-project sessions (Feature 3) ----
     // Unlike every other entry, a coding session is not a daily quantity: it is
@@ -835,7 +896,7 @@ const structuredData = [
       return { wh: a.wh / REF_TOKENS, emb: a.emb / REF_TOKENS, ml: a.ml / REF_TOKENS };
     }
     // Point estimate only (no low/high range) — plan.md's coding formula uses a
-    // single scaled value, unlike the ranged text/image/video calculations.
+    // single scaled value, unlike the ranged text/video calculations.
     // No retry multiplier here (unlike every other entry type, per Feature 5's
     // revision below): a session's lines-of-code figure already describes one
     // full run, and a repeated run rarely reproduces the same line count, so
@@ -856,21 +917,6 @@ const structuredData = [
       }
       return { wh, carbon, water };
     }
-    function fmtWords(n) { return n >= 1e6 ? fmtNum(n / 1e6) + ' million' : Math.round(n).toLocaleString('en-US'); }
-    function fmtReadingTime(minutes) {
-      if (minutes < 1) return 'under a minute';
-      if (minutes < 90) { const m = Math.round(minutes); return m + ' minute' + (m === 1 ? '' : 's'); }
-      const hours = minutes / 60;
-      if (hours < 48) return fmtNum(hours) + ' hours';
-      const days = hours / 24;
-      if (days < 14) return fmtNum(days) + ' days';
-      const weeks = days / 7;
-      if (weeks < 9) return fmtNum(weeks) + ' weeks';
-      const months = days / 30.44;
-      if (months < 18) return fmtNum(months) + ' months';
-      return fmtNum(days / 365) + ' years';
-    }
-
     // ---- DOM helpers ----
     function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
     function option(value, text, selected) { const o = document.createElement('option'); o.value = value; o.textContent = text; if (selected) o.selected = true; return o; }
@@ -879,7 +925,17 @@ const structuredData = [
     function buildShareURL() {
       const r = state.rows.map((row) => MODELS.findIndex((m) => m.id === row.model) + '-' + SIZES.findIndex((s) => s.id === row.size) + '-' + (row.count || 0) + '-' + (row.retry || 1)).join('.');
       const p = new URLSearchParams();
-      p.set('k', state.metric); p.set('l', state.loc); p.set('h', state.home); p.set('v', state.drive); p.set('d', state.diet); p.set('f', state.fly); p.set('r', r);
+      p.set('k', state.metric); p.set('l', state.loc); p.set('r', r);
+      // Keep the legacy text-row fields; version the additional state separately.
+      // Session selection travels with its entry, never with a transient DOM uid.
+      p.set('x', JSON.stringify({
+        version: 1,
+        images: state.images.map(({ count, retry }) => ({ count, retry })),
+        videos: state.videos.map(({ count, retry, duration }) => ({ count, retry, duration })),
+        codingSessions: state.codingSessions.map(({ model, lines, includeInPie }) => ({ model, lines, includeInPie: Boolean(includeInPie) })),
+        activities: state.activities, routerWatts: state.routerWatts,
+        pieBound: state.pieBound, headcount: state.headcount,
+      }));
       return location.origin + location.pathname + '#' + p.toString();
     }
     function readURL() {
@@ -889,25 +945,66 @@ const structuredData = [
         const p = new URLSearchParams(h);
         const k = p.get('k'); if (k === 'carbon' || k === 'water') state.metric = k;
         const l = p.get('l'); if (l && LOCATIONS.some((x) => x.id === l)) state.loc = l;
-        const hh = p.get('h'); if (hh && HOMES.some((x) => x.id === hh)) state.home = hh;
-        const vv = p.get('v'); if (vv && DRIVING.some((x) => x.id === vv)) state.drive = vv;
-        const d = p.get('d'); if (d && DIETS.some((x) => x.id === d)) state.diet = d;
-        const f = p.get('f'); if (f && FLYING.some((x) => x.id === f)) state.fly = f;
+        readAdditionalURLState(p.get('x'));
         const r = p.get('r');
+        if (r === '') state.rows = [];
         if (r) {
+          // Dots separate rows: reject broken row syntax as a whole so a
+          // decimal such as a retry of 1.5 cannot become a retry of 1.
+          if (!r.split('.').every((part) => /^\d+-\d+-\d+(?:-\d+)?$/.test(part))) return;
           const rows = [];
           for (const part of r.split('.')) {
-            const a = part.split('-').map(Number);
-            // a[3] (retry) is optional so links saved before Project 2 still parse; missing or invalid -> 1.
-            // 'agent' rows no longer belong here — they live in codingSessions (not yet URL-encoded) — so skip any.
-            if (MODELS[a[0]] && SIZES[a[1]] && SIZES[a[1]].id !== 'agent' && a[2] >= 0) {
-              const retry = a.length > 3 && a[3] >= 1 ? Math.min(1000, Math.round(a[3])) : 1;
-              rows.push({ uid: uidSeq++, model: MODELS[a[0]].id, size: SIZES[a[1]].id, count: Math.min(100000, a[2]), retry });
+            const fields = part.split('-');
+            if (fields.length !== 3 && fields.length !== 4) continue;
+            const modelIndex = clampInt(fields[0], 0, Number.MAX_SAFE_INTEGER, null);
+            const sizeIndex = clampInt(fields[1], 0, Number.MAX_SAFE_INTEGER, null);
+            const count = clampInt(fields[2], 0, 100000, null);
+            // Old three-field links default to one generation. Malformed
+            // supplied values invalidate the row instead of inventing usage.
+            const retry = fields.length === 3 ? 1 : clampInt(fields[3], 1, 1000, null);
+            const model = MODELS[modelIndex], size = SIZES[sizeIndex];
+            if (model && size && size.id !== 'agent' && count !== null && retry !== null) {
+              rows.push({ uid: uidSeq++, model: model.id, size: size.id, count, retry });
             }
           }
           if (rows.length) state.rows = rows;
         }
       } catch (e) { /* ignore */ }
+    }
+    function readAdditionalURLState(raw) {
+      if (!raw) return;
+      let saved;
+      try { saved = JSON.parse(raw); } catch { return; }
+      if (!saved || saved.version !== 1) return;
+      for (const kind of ['images', 'videos']) {
+        if (!Array.isArray(saved[kind])) continue;
+        state[kind] = saved[kind].flatMap((entry) => {
+          if (!entry || typeof entry !== 'object') return [];
+          const count = clampInt(entry.count, 0, 100000, null);
+          const retry = clampInt(entry.retry, 1, 1000, null);
+          const duration = kind === 'videos' ? clampInt(entry.duration, 0, 3600, null) : 0;
+          if (count === null || retry === null || duration === null) return [];
+          return [{ uid: uidSeq++, count, retry, ...(kind === 'videos' ? { duration } : {}) }];
+        });
+      }
+      if (Array.isArray(saved.codingSessions)) {
+        state.codingSessions = saved.codingSessions.flatMap((entry) => {
+          if (!entry || !MODELS.some((model) => model.id === entry.model)) return [];
+          const lines = clampInt(entry.lines, 0, MAX_SESSION_LINES, null);
+          return lines === null ? [] : [{ uid: uidSeq++, model: entry.model, lines, includeInPie: entry.includeInPie === true }];
+        });
+      }
+      if (saved.activities && typeof saved.activities === 'object') {
+        for (const id of Object.keys(state.activities)) {
+          const hours = clampFloat(saved.activities[id], 0, 24, null);
+          if (hours !== null) state.activities[id] = hours;
+        }
+      }
+      const watts = clampFloat(saved.routerWatts, 0, MAX_ROUTER_WATTS, null);
+      if (watts !== null) state.routerWatts = watts;
+      const headcount = clampInt(saved.headcount, 1, 1000000, null);
+      if (headcount !== null) state.headcount = headcount;
+      if (saved.pieBound === 'low' || saved.pieBound === 'high') state.pieBound = saved.pieBound;
     }
     function setDefaultRows() { state.rows = DEFAULT_ROWS.map((r) => ({ uid: uidSeq++, model: r[0], size: r[1], count: r[2], retry: 1 })); }
 
@@ -931,16 +1028,15 @@ const structuredData = [
       sel.addEventListener('change', () => { row.size = sel.value; updateOutputs(); });
       return sel;
     }
-    function stepper(row) {
+    function stepper(row, label = 'Prompts per day') {
       const ctrl = el('div', 'aipf-stepper');
       const minus = el('button', 'aipf-step', '−'); minus.type = 'button'; minus.setAttribute('aria-label', 'Fewer');
       const input = document.createElement('input');
-      input.type = 'text'; input.inputMode = 'numeric'; input.className = 'aipf-count'; input.value = String(row.count || 0); input.setAttribute('aria-label', 'Per day');
+      input.type = 'text'; input.inputMode = 'numeric'; input.className = 'aipf-count'; input.value = String(row.count || 0); input.setAttribute('aria-label', label);
       const plus = el('button', 'aipf-step', '+'); plus.type = 'button'; plus.setAttribute('aria-label', 'More');
       minus.addEventListener('click', () => bump(row, input, -1));
       plus.addEventListener('click', () => bump(row, input, 1));
-      input.addEventListener('input', () => { row.count = clampInt(input.value, 0, 100000, 0); updateOutputs(); });
-      input.addEventListener('blur', () => { input.value = String(row.count || 0); });
+      bindIntegerInput(input, 0, 100000, () => row.count, (value) => { row.count = value; updateOutputs(); });
       ctrl.appendChild(minus); ctrl.appendChild(input); ctrl.appendChild(plus);
       return ctrl;
     }
@@ -948,11 +1044,11 @@ const structuredData = [
       const cur = row.count || 0;
       let step = 1; if (cur >= 50) step = 10; else if (cur >= 20) step = 5;
       let next = cur + dir * step; if (dir < 0 && cur > 0 && cur <= step) next = 0;
-      row.count = Math.max(0, Math.min(100000, next)); input.value = String(row.count); updateOutputs();
+      row.count = Math.max(0, Math.min(100000, next)); input.value = String(row.count); input.dispatchEvent(new Event('input')); updateOutputs();
     }
     // Retry/regeneration multiplier control (Feature 5): defaults to 1 (the
-    // original output only); clampInt's own min:1 floor rejects anything lower.
-    // onChange lets coding sessions reuse this with their own re-render.
+    // original output only); valid values below 1 are bounded to 1.
+    // onChange lets other daily entry types supply their own output updates.
     function retryControl(row, onChange) {
       const wrap = el('div', 'aipf-retry');
       wrap.appendChild(el('span', 'aipf-retry-x', '×'));
@@ -960,8 +1056,7 @@ const structuredData = [
       input.type = 'text'; input.inputMode = 'numeric'; input.className = 'aipf-retry-input';
       input.value = String(row.retry || 1);
       input.setAttribute('aria-label', 'Retries or regenerations of this row (1 = the original output only)');
-      input.addEventListener('input', () => { row.retry = clampInt(input.value, 1, 1000, 1); if (onChange) onChange(); else { updateRowMeta(); updateOutputs(); } });
-      input.addEventListener('blur', () => { input.value = String(row.retry || 1); });
+      bindIntegerInput(input, 1, 1000, () => row.retry, (value) => { row.retry = value; if (onChange) onChange(); else updateOutputs(); });
       wrap.appendChild(input);
       return wrap;
     }
@@ -993,26 +1088,32 @@ const structuredData = [
       input.type = 'text'; input.inputMode = 'numeric'; input.className = 'aipf-lines-input';
       input.value = String(session.lines || 0);
       input.setAttribute('aria-label', 'Lines of code produced by this session');
-      input.addEventListener('input', () => { session.lines = clampInt(input.value, 0, MAX_SESSION_LINES, 0); renderCodeMeta(); renderProjectTotal(); });
-      input.addEventListener('blur', () => { input.value = String(session.lines || 0); });
+      bindIntegerInput(input, 0, MAX_SESSION_LINES, () => session.lines, (value) => { session.lines = value; renderCodeMeta(); renderProjectTotal(); renderPie(); renderDaily(); });
       wrap.appendChild(input);
       wrap.appendChild(el('span', 'aipf-lines-suffix', 'lines'));
       return wrap;
     }
-    function removeCodingSession(uid) { state.codingSessions = state.codingSessions.filter((x) => x.uid !== uid); renderCodeRows(); renderProjectTotal(); }
+    function removeCodingSession(uid) { state.codingSessions = state.codingSessions.filter((x) => x.uid !== uid); renderCodeRows(); renderProjectTotal(); renderPie(); renderDaily(); }
     function renderCodeRows() {
       const wrap = root.querySelector('#aipf-rows-code');
       wrap.innerHTML = '';
       for (const session of state.codingSessions) {
         const wrapEl = el('div', 'aipf-rowwrap'); wrapEl.dataset.uid = String(session.uid);
         const r = el('div', 'aipf-row aipf-row--code');
-        r.appendChild(modelSelect(session, () => { renderCodeRows(); renderProjectTotal(); }));
+        r.appendChild(modelSelect(session, () => { renderCodeRows(); renderProjectTotal(); renderPie(); renderDaily(); }));
         r.appendChild(linesInput(session));
         const rm = el('button', 'aipf-rowdel', '×'); rm.type = 'button'; rm.setAttribute('aria-label', 'Remove this session');
         rm.addEventListener('click', () => removeCodingSession(session.uid));
         r.appendChild(rm);
         wrapEl.appendChild(r);
         wrapEl.appendChild(el('div', 'aipf-row-meta'));
+        const choice = el('label', 'aipf-pie-session');
+        const checkbox = document.createElement('input'); checkbox.type = 'checkbox';
+        checkbox.checked = Boolean(session.includeInPie);
+        checkbox.addEventListener('change', () => { session.includeInPie = checkbox.checked; renderPie(); });
+        choice.appendChild(checkbox);
+        const label = el('span', '', 'Include session ' + (state.codingSessions.indexOf(session) + 1) + ' once in the one-day chart');
+        choice.appendChild(label); wrapEl.appendChild(choice);
         wrap.appendChild(wrapEl);
       }
       if (!state.codingSessions.length) wrap.appendChild(el('p', 'aipf-empty', 'No coding sessions yet. Add one to begin.'));
@@ -1037,7 +1138,115 @@ const structuredData = [
         '</b> and <b>' + fmtWater(t.water) + '</b> (' + fmtEnergy(t.wh) +
         '). A one-time project cost, not a daily or yearly figure — it is not included in your combined AI-use totals above.';
     }
-    function renderRows() { renderChatRows(); renderCodeRows(); }
+    function durationInput(entry) {
+      const wrap = el('div', 'aipf-lines aipf-duration');
+      const input = document.createElement('input');
+      input.type = 'text'; input.inputMode = 'numeric'; input.className = 'aipf-lines-input';
+      input.value = String(entry.duration);
+      input.setAttribute('aria-label', 'Duration per video clip in seconds (720p)');
+      bindIntegerInput(input, 0, 3600, () => entry.duration, (value) => { entry.duration = value; updateOutputs(); });
+      wrap.appendChild(input); wrap.appendChild(el('span', 'aipf-lines-suffix', 'seconds'));
+      return wrap;
+    }
+    function renderMediaRows(kind) {
+      const isVideo = kind === 'video', entries = isVideo ? state.videos : state.images;
+      const wrap = root.querySelector('#aipf-rows-' + kind);
+      wrap.innerHTML = '';
+      for (const entry of entries) {
+        const outer = el('div', 'aipf-rowwrap'); outer.dataset.uid = String(entry.uid);
+        const row = el('div', 'aipf-row aipf-row--' + kind);
+        row.appendChild(stepper(entry, isVideo ? 'Video clips per day' : 'Images per day'));
+        if (isVideo) row.appendChild(durationInput(entry));
+        row.appendChild(retryControl(entry));
+        const remove = el('button', 'aipf-rowdel', '×'); remove.type = 'button';
+        remove.setAttribute('aria-label', 'Remove ' + kind + ' entry');
+        remove.addEventListener('click', () => {
+          if (isVideo) state.videos = state.videos.filter((e) => e.uid !== entry.uid);
+          else state.images = state.images.filter((e) => e.uid !== entry.uid);
+          renderMediaRows(kind); updateOutputs();
+        });
+        row.appendChild(remove); outer.appendChild(row);
+        const meta = el('div', 'aipf-row-meta'); meta.setAttribute('aria-live', 'polite');
+        outer.appendChild(meta); wrap.appendChild(outer);
+      }
+      if (!entries.length) wrap.appendChild(el('p', 'aipf-empty', 'No ' + (isVideo ? 'video clips' : 'images') + ' yet. Add an entry to begin.'));
+      updateMediaMeta();
+    }
+    function updateMediaMeta() {
+      const total = aiDaily(state.metric);
+      for (const [entries, isVideo] of [[state.images, false], [state.videos, true]]) {
+        for (const entry of entries) {
+          const meta = root.querySelector('.aipf-rowwrap[data-uid="' + entry.uid + '"] .aipf-row-meta');
+          if (!meta) continue;
+          const v = isVideo ? videoEntryValues(entry) : imageEntryValues(entry);
+          const share = total > 0 ? v[state.metric] / total * 100 : 0;
+          const energy = isVideo ? fmtEnergy(v.whLow) + '–' + fmtEnergy(v.whHigh) + ' (mean ' + fmtEnergy(v.wh) + ')' : fmtEnergy(v.wh);
+          const carbon = isVideo ? fmtCarbon(v.carbonLow) + '–' + fmtCarbon(v.carbonHigh) + ' (mean ' + fmtCarbon(v.carbon) + ')' : fmtCarbon(v.carbon);
+          meta.textContent = 'Per day: ' + energy + '; ' + carbon + ' derived carbon; ' + fmtWater(v.water) + ' derived water. ' + share.toFixed(1) + '% of your AI ' + metricWord() + '.';
+        }
+      }
+    }
+    function renderRouterInput() {
+      const wrap = root.querySelector('#aipf-router-control');
+      wrap.innerHTML = '';
+      const label = el('label', 'aipf-activity-label');
+      label.htmlFor = 'aipf-router-watts'; label.textContent = 'Estimated router / gateway power (watts, 0–1,000)';
+      const input = document.createElement('input');
+      input.id = label.htmlFor; input.type = 'text'; input.inputMode = 'decimal';
+      input.setAttribute('aria-describedby', 'aipf-router-guide');
+      input.className = 'aipf-hours'; input.value = String(state.routerWatts);
+      bindDecimalInput(input, 0, MAX_ROUTER_WATTS, () => state.routerWatts, (value) => {
+        state.routerWatts = value; renderRouterResults(); renderDaily(); renderAnnualSplit(); renderPie();
+      });
+      wrap.appendChild(label); wrap.appendChild(input);
+    }
+    function renderRouterResults() {
+      const v = routerValues();
+      const summary = (scale) => fmtEnergy(v.kwh * 1000 * scale) + '; ' +
+        fmtCarbon(v.carbon * scale) + ' derived carbon; ' + fmtWater(v.water * scale) + ' derived water.';
+      root.querySelector('#aipf-router-results').innerHTML =
+        '<p><strong>Per day:</strong> ' + summary(1) + '</p>' +
+        '<p><strong>Per year:</strong> ' + summary(DAYS) + '</p>';
+    }
+    function renderActivityInputs() {
+      const wrap = root.querySelector('#aipf-activities');
+      wrap.innerHTML = '';
+      for (const activity of ACTIVITIES) {
+        const card = el('div', 'aipf-activity aipf-rowwrap');
+        const label = el('label', 'aipf-activity-label');
+        label.htmlFor = 'aipf-hours-' + activity.id;
+        label.textContent = activity.label + ' — hours per day';
+        const input = document.createElement('input');
+        input.id = label.htmlFor; input.type = 'text'; input.inputMode = 'decimal';
+        input.className = 'aipf-hours'; input.value = String(state.activities[activity.id]);
+        bindDecimalInput(input, 0, 24, () => state.activities[activity.id], (value) => {
+          state.activities[activity.id] = value;
+          renderActivityResults(); renderDaily(); renderAnnualSplit(); renderPie();
+        });
+        card.appendChild(label); card.appendChild(input);
+        const results = el('div', 'aipf-activity-results');
+        results.id = 'aipf-activity-' + activity.id; results.setAttribute('aria-live', 'polite');
+        card.appendChild(results);
+        const details = el('details', 'aipf-activity-source');
+        details.appendChild(el('summary', '', 'Source and limitations'));
+        details.appendChild(el('p', 'aipf-hint', activity.note));
+        card.appendChild(details); wrap.appendChild(card);
+      }
+    }
+    function renderActivityResults() {
+      for (const activity of ACTIVITIES) {
+        const values = activityValues(activity.id);
+        const carbonLabel = activity.carbonPerHour === undefined ? 'derived carbon' : 'published carbon';
+        const box = root.querySelector('#aipf-activity-' + activity.id);
+        box.innerHTML = '';
+        box.appendChild(el('p', '', '<strong>Per day:</strong> ' + activitySummary(values, 1, carbonLabel)));
+        box.appendChild(el('p', '', '<strong>Per year:</strong> ' + activitySummary(values, DAYS, carbonLabel)));
+      }
+      const totals = digitalLifeTotals();
+      root.querySelector('#aipf-digital-total').innerHTML = '<strong>Combined digital-life activities</strong>' +
+        '<p>Per day: ' + activitySummary(totals, 1) + '</p><p>Per year: ' + activitySummary(totals, DAYS) + '</p>';
+    }
+    function renderRows() { renderChatRows(); renderCodeRows(); renderMediaRows('image'); renderMediaRows('video'); }
     function updateRowMeta() {
       const total = aiDaily(state.metric);
       for (const row of state.rows) {
@@ -1052,114 +1261,174 @@ const structuredData = [
         wrapEl.textContent = fmtMetric(per) + ' each, ' + fmtMetric(contr) + ' a day' + retryNote + ', ' + shareStr + '% of your AI ' + metricWord();
       }
     }
-    function renderLifeSelects() {
-      function fill(id, list, cur) { const sel = root.querySelector(id); sel.innerHTML = ''; for (const x of list) sel.appendChild(option(x.id, x.label, x.id === cur)); }
-      fill('#aipf-loc', LOCATIONS, state.loc);
-      fill('#aipf-home', HOMES, state.home);
-      fill('#aipf-drive', DRIVING, state.drive);
-      fill('#aipf-diet', DIETS, state.diet);
-      fill('#aipf-fly', FLYING, state.fly);
+    function renderLocationSelect() {
+      const select = root.querySelector('#aipf-loc');
+      select.innerHTML = '';
+      for (const location of LOCATIONS) select.appendChild(option(location.id, location.label, location.id === state.loc));
     }
 
     // ---- Outputs ----
     function renderRunning() {
       const box = root.querySelector('#aipf-running');
-      const n = totalPrompts();
+      const phrase = usagePhrase();
       const cD = aiDaily('carbon'), wD = aiDaily('water'), eD = aiDailyEnergy();
-      if (n <= 0) { box.innerHTML = 'Nothing entered yet.'; return; }
+      if (!phrase) { box.innerHTML = 'Nothing entered yet.'; return; }
       box.innerHTML =
-        'That is <b>' + n.toLocaleString('en-US') + '</b> prompts a day, costing about <b>' + fmtCarbon(cD) +
-        '</b> and <b>' + fmtWater(wD) + '</b> (' + fmtEnergy(eD) + '). Over a year, <b>' + fmtCarbon(cD * DAYS) +
-        '</b> and <b>' + fmtWater(wD * DAYS) + '</b>.';
+        'That is <b>' + phrase + '</b> a day, costing about <b>' + fmtCarbon(cD) +
+        '</b> and <b>' + fmtWater(wD) + ' of water</b> (' + fmtEnergy(eD) + ' of electricity). Over a year, <b>' + fmtCarbon(cD * DAYS) +
+        '</b> and <b>' + fmtWater(wD * DAYS) + ' of water</b>.';
     }
 
     function renderHeadline() {
-      const box = root.querySelector('#aipf-headline');
       const t = aiDailyTriple(state.metric);
-      const ai = t[0], day = dailyFootprint(state.metric);
-      const pct = day > 0 ? (ai / day) * 100 : 0;
-      let pctStr;
-      if (pct >= 1) pctStr = pct.toFixed(pct >= 10 ? 0 : 1) + '%';
-      else if (pct >= 0.01) pctStr = pct.toFixed(2) + '%';
-      else if (pct > 0) pctStr = 'under 0.01%';
-      else pctStr = '0%';
-      box.innerHTML =
-        '<div class="aipf-verdict-fig">' + pctStr + '</div>' +
-        '<p class="aipf-verdict-say">of your daily ' + metricWord() + ' footprint.</p>' +
-        '<p class="aipf-verdict-detail">A day of your AI use is ' + fmtMetric(ai) + ' (' + fmtMetric(t[1]) + ' to ' + fmtMetric(t[2]) +
-          '). A day of your life is ' + fmtMetric(day) + '.</p>' +
-        '<div class="aipf-prop"><div class="aipf-prop-fill" style="width:' + Math.max(0.5, Math.min(100, pct)).toFixed(2) + '%"></div></div>' +
-        '<div class="aipf-prop-cap"><span class="accent">your AI use</span><span>a full day</span></div>';
+      root.querySelector('#aipf-headline').innerHTML =
+        '<p class="aipf-verdict-say">Your daily AI ' + metricWord() + '</p>' +
+        '<div class="aipf-verdict-fig">' + fmtMetric(t[0]) + '</div>' +
+        '<p class="aipf-verdict-detail">' + (t[1] === t[2] ? 'Point estimate.' : 'Range: ' + fmtMetric(t[1]) + ' to ' + fmtMetric(t[2]) + '.') +
+        ' About ' + fmtMetric(t[0] * DAYS) + ' per year at this daily usage.</p>';
     }
 
-    // Short, shareable one-liner for the "Copy my summary" button — same
-    // percentage math as renderHeadline, in plain text instead of markup.
     function buildSummaryText() {
       const t = aiDailyTriple(state.metric);
-      const ai = t[0], day = dailyFootprint(state.metric);
-      const pct = day > 0 ? (ai / day) * 100 : 0;
-      let pctStr;
-      if (pct >= 1) pctStr = pct.toFixed(pct >= 10 ? 0 : 1) + '%';
-      else if (pct >= 0.01) pctStr = pct.toFixed(2) + '%';
-      else if (pct > 0) pctStr = 'under 0.01%';
-      else pctStr = '0%';
-      const aiYr = ai * DAYS;
-      return 'My daily AI use is ' + pctStr + ' of my daily ' + metricWord() + ' footprint: ' +
-        fmtMetric(ai) + ' today, ' + fmtMetric(aiYr) + ' a year. (' + location.origin + location.pathname + ')';
+      return 'My daily AI ' + metricWord() + ': ' + fmtMetric(t[0]) +
+        (t[1] === t[2] ? '' : ' (range ' + fmtMetric(t[1]) + ' to ' + fmtMetric(t[2]) + ')') +
+        ', about ' + fmtMetric(t[0] * DAYS) + ' a year. (' + location.origin + location.pathname + ')';
     }
 
     function renderGridNote() {
       const box = root.querySelector('#aipf-grid-note');
       box.style.display = '';
-      if (state.metric === 'carbon') box.textContent = 'AI carbon uses the ' + getLoc().label + ' grid for electricity, plus EcoLogits’ embodied hardware emissions.';
-      else box.textContent = 'Water is blue water only: freshwater drawn from rivers, lakes, and aquifers. Green rainwater (most of food’s footprint) is excluded.';
+      if (state.metric === 'carbon') box.textContent = 'AI carbon uses the ' + getLoc().label + ' grid for electricity. Text and coding also include EcoLogits’ embodied hardware emissions; media does not.';
+      else box.textContent = 'AI water uses freshwater consumption estimates. Electricity-derived water excludes on-site cooling; some legacy product comparisons use broader water footprints. See methodology for differences.';
     }
 
-    function renderWords() {
-      const box = root.querySelector('#aipf-words');
-      const wd = dailyWords();
-      if (wd <= 0) { box.innerHTML = 'Add some use to see how much your AI is writing.'; return; }
-      let html = '';
-      const wy = wd * DAYS;
-      html += 'About <b>' + fmtWords(wd) + ' words a day</b>, roughly <b>' + fmtWords(wy) + ' a year</b>. At the average American reading pace of ' + WPM +
-        ' words a minute, that is <b>' + fmtReadingTime(wd / WPM) + '</b> of reading a day, or <b>' + fmtReadingTime(wy / WPM) + '</b> nonstop across the year.';
-      const miles = Math.round(aiDaily('carbon') * DAYS / 400); // EPA ~400 g CO2 per vehicle-mile
-      html += '<span class="aipf-words-miles">If you use chatbots this much every day, your annual use emits as much as driving the average gas car <b>' + miles.toLocaleString('en-US') + '</b> mile' + (miles === 1 ? '' : 's') + ' once.</span>';
-      box.innerHTML = html;
+    const codingSessionColors = new Map();
+    function codingSessionColor(uid) {
+      // Stable by session ID: removing a session does not recolor the others.
+      // Spread hues through red, orange, and yellow without cycling a short palette.
+      if (codingSessionColors.has(uid)) return codingSessionColors.get(uid);
+      const index = codingSessionColors.size;
+      const hue = index === 0 ? 54 : (54 + index * 37.082039325) % 65;
+      const color = 'hsl(' + hue.toFixed(6) + ' 100% 50%)';
+      codingSessionColors.set(uid, color);
+      return color;
+    }
+
+    // Color fallbacks keep the full gradient valid during stylesheet hot reloads.
+    // Pie scenarios preserve source endpoints; gaming has no published mean.
+    function pieContributions() {
+      const metric = state.metric, high = state.pieBound === 'high';
+      const rows = [];
+      const add = (id, label, low, upper, color) => {
+        const value = high ? upper : low;
+        if (value > 0) rows.push({ id, label, low, high: upper, value, color });
+      };
+      let textLow = 0, textHigh = 0;
+      for (const row of state.rows) {
+        const t = perPromptTriple(getModel(row.model), row.size, metric);
+        textLow += row.count * (row.retry || 1) * t[1];
+        textHigh += row.count * (row.retry || 1) * t[2];
+      }
+      add('text', 'Chatbot & text', textLow, textHigh, 'var(--pie-green, #6fbf94)');
+      const images = imageDailyTriple(metric), videos = videoDailyTriple(metric);
+      add('images', 'Image generation', images[1], images[2], 'var(--pie-blue, #74b3e0)');
+      add('videos', 'Video generation', videos[1], videos[2], 'var(--pie-gold, #c4aa6e)');
+      const colors = ['var(--pie-purple, #b095ce)', 'var(--pie-call-blue, #3658ab)', 'var(--pie-rose, #da8da9)', 'var(--pie-orange, #dfa06e)'];
+      ACTIVITIES.forEach((activity, i) => {
+        const pair = activityValues(activity.id)[metric];
+        add(activity.id, activity.label, pair[0], pair[1], colors[i]);
+      });
+      const router = routerValues()[metric];
+      add('router', 'Router — 24 hours', router, router, 'var(--pie-router, #287044)');
+      state.codingSessions.forEach((session, i) => {
+        if (!session.includeInPie) return;
+        const value = codingSessionValues(session)[metric];
+        add('session-' + session.uid, 'Coding session ' + (i + 1) + ' — ' + getModel(session.model).name + ' (once)', value, value, codingSessionColor(session.uid));
+      });
+      return rows;
+    }
+    function renderPie() {
+      const rows = pieContributions().sort((a, b) => b.value - a.value), total = rows.reduce((sum, row) => sum + row.value, 0);
+      const scenario = state.pieBound === 'high' ? 'Upper' : 'Lower';
+      root.querySelector('#aipf-pie-metric').value = state.metric;
+      root.querySelector('#aipf-pie-bound').value = state.pieBound;
+      root.querySelector('#aipf-pie-total').textContent = total > 0
+        ? scenario + '-estimate total for this day: ' + fmtMetric(total) + '.'
+        : 'No footprint to show. Add usage, enter activity hours, set router watts, or select a coding session.';
+      root.querySelector('#aipf-pie-caption').textContent = 'One-day ' + metricWord() + ' breakdown — ' + scenario.toLowerCase() + ' estimate';
+      const disc = root.querySelector('#aipf-pie-disc');
+      disc.hidden = total <= 0;
+      const body = root.querySelector('#aipf-pie-values'); body.innerHTML = '';
+      let end = 0;
+      const stops = [];
+      for (const row of rows) {
+        const start = end; end += row.value / total * 100;
+        stops.push(row.color + ' ' + start + '% ' + end + '%');
+        const tr = document.createElement('tr');
+        const label = document.createElement('th'); label.scope = 'row';
+        const swatch = el('span', 'aipf-pie-swatch'); swatch.style.background = row.color; swatch.setAttribute('aria-hidden', 'true');
+        label.appendChild(swatch); label.appendChild(document.createTextNode(row.label));
+        tr.appendChild(label);
+        const value = el('td', '', fmtMetric(row.value));
+        if (row.low !== row.high) value.appendChild(el('small', '', 'Range: ' + fmtMetric(row.low) + '–' + fmtMetric(row.high)));
+        tr.appendChild(value);
+        const percent = row.value / total * 100;
+        tr.appendChild(el('td', '', percent < 0.1 ? '<0.1%' : percent.toFixed(1) + '%'));
+        body.appendChild(tr);
+      }
+      disc.style.background = total > 0 ? 'conic-gradient(' + stops.join(', ') + ')' : '';
+      if (!rows.length) {
+        const tr = document.createElement('tr'), td = el('td', '', 'No non-zero contributions.');
+        td.colSpan = 3; tr.appendChild(td); body.appendChild(tr);
+      }
     }
 
     function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
-    function renderBars(targetId, focalLabel, focalVal, items, unit) {
+    function renderBars(targetId, focalLabel, focalVal, items, unit, extraRows = []) {
       const rows = [{ label: focalLabel, v: focalVal, focal: true }];
       for (const it of items) {
         const v = itemBase(it, state.metric);
         if (v <= 0) continue; // skip items with no impact in this metric (keeps the water view clean)
         rows.push({ label: it.label, v: v, dir: it.dir });
       }
+      rows.push(...extraRows);
       rows.sort((a, b) => b.v - a.v);
       const max = Math.max.apply(null, rows.map((r) => r.v).concat([1e-9]));
       const box = root.querySelector(targetId);
       box.innerHTML = '';
       for (const r of rows) {
-        const row = el('div', 'aipf-bar-row' + (r.focal ? ' is-focal' : ''));
+        const row = el('div', 'aipf-bar-row' + (r.focal ? ' is-focal' : '') + (r.digital ? ' is-digital' : '') + (r.router ? ' is-router' : '') + (r.project ? ' is-project' : ''));
         let labelHtml = esc(r.label);
+        if (r.project) labelHtml += ' <span class="aipf-tag">whole project</span>';
+        if (r.router) labelHtml += ' <span class="aipf-tag">infrastructure</span>';
+        if (r.digital) labelHtml += ' <span class="aipf-tag">digital life</span>';
         if (r.dir === 'save') labelHtml += ' <span class="aipf-tag aipf-tag--save">saved</span>';
         else if (r.dir === 'add') labelHtml += ' <span class="aipf-tag aipf-tag--add">added</span>';
         row.appendChild(el('div', 'aipf-bar-label', labelHtml));
         const track = el('div', 'aipf-bar-track');
-        const fill = el('div', 'aipf-bar-fill'); fill.style.width = Math.max(0.4, (r.v / max) * 100).toFixed(2) + '%';
+        const fill = el('div', 'aipf-bar-fill');
+        const solidValue = r.low === undefined ? r.v : r.low;
+        fill.style.width = (solidValue <= 0 ? 0 : Math.max(0.4, (solidValue / max) * 100)).toFixed(2) + '%';
         track.appendChild(fill);
+        if (r.high > r.low) {
+          const range = el('div', 'aipf-bar-range');
+          range.style.left = (r.low / max * 100).toFixed(2) + '%';
+          range.style.width = ((r.high - r.low) / max * 100).toFixed(2) + '%';
+          track.appendChild(range);
+        }
+        track.setAttribute('aria-hidden', 'true');
         row.appendChild(track);
-        row.appendChild(el('div', 'aipf-bar-val', fmtUnit(r.v, unit)));
+        const value = r.high > r.low ? fmtUnit(r.low, unit) + '–' + fmtUnit(r.high, unit) : fmtUnit(r.v, unit);
+        row.appendChild(el('div', 'aipf-bar-val', value));
         box.appendChild(row);
       }
     }
     function renderDaily() {
       const ai = aiDaily(state.metric);
       const unit = chartUnit(state.metric, 'daily');
-      root.querySelector('#aipf-daily-sub').innerHTML = 'A day of your AI use (highlighted below) is ' + fmtUnit(ai, unit) + '.';
+      root.querySelector('#aipf-daily-sub').innerHTML = 'A day of your AI use (highlighted below) is ' + fmtUnit(ai, unit) + (projectComparisonRows().length ? '. The coding bar shows your whole project once, alongside daily comparisons; it is separate from daily and yearly totals.' : '.');
       const items = state.metric === 'water' ? DAILY_WATER_ITEMS : DAILY_ITEMS;
-      renderBars('#aipf-daily-bars', 'Your daily AI use', ai, items, unit);
+      renderBars('#aipf-daily-bars', 'Your daily AI use', ai, items, unit, digitalComparisonRows().concat(routerComparisonRow(), projectComparisonRows()));
     }
     function renderAnnualSplit() {
       const aiYr = aiDaily(state.metric) * DAYS;
@@ -1172,7 +1441,7 @@ const structuredData = [
       root.querySelector('#aipf-cut-title').textContent = 'In a year, ways you can cut ' + noun;
       const unit = chartUnit(state.metric, 'annual');
       root.querySelector('#aipf-add-sub').innerHTML = 'Your AI use (highlighted) is ' + fmtUnit(aiYr, unit) + ' a year, next to other things that add to your footprint.';
-      renderBars('#aipf-add-bars', 'A year of your AI use', aiYr, adds, unit);
+      renderBars('#aipf-add-bars', 'A year of your AI use', aiYr, adds, unit, digitalComparisonRows(DAYS).concat(routerComparisonRow(DAYS)));
       root.querySelector('#aipf-cut-sub').innerHTML = 'Cutting your AI use (highlighted) would save ' + fmtUnit(aiYr, unit) + ' a year, next to the bigger cuts you could make.';
       renderBars('#aipf-cut-bars', 'Cut your AI use', aiYr, cuts, unit);
     }
@@ -1196,7 +1465,7 @@ const structuredData = [
     }
 
     function updateOutputs() {
-      renderRunning(); updateRowMeta(); renderHeadline(); renderGridNote(); renderWords(); renderDaily(); renderAnnualSplit(); renderCompany();
+      renderRunning(); updateRowMeta(); updateMediaMeta(); renderHeadline(); renderGridNote(); renderPie(); renderDaily(); renderAnnualSplit(); renderCompany(); renderActivityResults(); renderRouterResults();
       renderProjectTotal(); // grid factor affects coding-project carbon even when no session changed
     }
     // ---- Cited report ----
@@ -1211,13 +1480,65 @@ const structuredData = [
       let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="max-width:' + W + 'px" role="img">';
       rows.forEach((r, i) => {
         const y = top + i * rowH, cy = y + rowH / 2;
-        const bw = Math.max(2, (r.v / max) * barMax);
+        const bw = r.v > 0 ? Math.max(2, (r.v / max) * barMax) : 0;
         const col = r.focal ? '#1f5a7a' : '#bcbfb2';
         s += '<text x="' + (padL - 8) + '" y="' + (cy + 4) + '" text-anchor="end" font-size="12.5" fill="#1C1E1B">' + escXml(r.label) + '</text>';
         s += '<rect x="' + padL + '" y="' + (y + 5) + '" width="' + bw.toFixed(1) + '" height="' + (rowH - 12) + '" fill="' + col + '"/>';
-        s += '<text x="' + (padL + bw + 6).toFixed(1) + '" y="' + (cy + 4) + '" font-size="11.5" fill="#555">' + escXml(fmt(r.v)) + '</text>';
+        s += '<text x="' + (padL + bw + 6).toFixed(1) + '" y="' + (cy + 4) + '" font-size="11.5" fill="#555">' + escXml(r.high > r.low ? formatPair([r.low, r.high], fmt) : fmt(r.v)) + '</text>';
       });
       return s + '</svg>';
+    }
+    function reportComparisonRows(metric, scale = 1, includeProject = false) {
+      const rows = ACTIVITIES.map((activity) => {
+        const pair = activityValues(activity.id)[metric].map((v) => v * scale);
+        return { label: activity.label + ' (' + state.activities[activity.id] + ' h/day)', v: pair[1], low: pair[0], high: pair[1] };
+      });
+      rows.push({ label: 'Router — ' + (scale === 1 ? '24 hours' : '365 days'), v: routerValues()[metric] * scale });
+      if (includeProject && state.codingSessions.some((session) => session.lines > 0)) {
+        rows.push({ label: 'Coding — whole project (once)', v: codingProjectTotals()[metric] });
+      }
+      return rows;
+    }
+    function reportDetailsHTML() {
+      const cell = (value) => '<td>' + escXml(value) + '</td>';
+      const table = (headers, rows) => '<div class="table-wrap"><table><thead><tr>' + headers.map((h) => '<th scope="col">' + h + '</th>').join('') + '</tr></thead><tbody>' +
+        (rows.length ? rows.map((row) => '<tr>' + row.map(cell).join('') + '</tr>').join('') : '<tr><td colspan="' + headers.length + '">No entries.</td></tr>') + '</tbody></table></div>';
+      const point = (v) => [fmtEnergy(v.wh), fmtCarbon(v.carbon), fmtWater(v.water)];
+      const period = (v, scale) => [formatPair(v.kwh, (n) => fmtEnergy(n * 1000), scale), formatPair(v.carbon, fmtCarbon, scale), formatPair(v.water, fmtWater, scale)];
+      let html = '<h2>Media inputs and daily estimates</h2>';
+      const media = state.images.map((entry, i) => ['Image entry ' + (i + 1), entry.count + ' images/day; ×' + entry.retry, ...point(imageEntryValues(entry))]);
+      state.videos.forEach((entry, i) => {
+        const v = videoEntryValues(entry);
+        media.push(['Video entry ' + (i + 1), entry.count + ' clips/day; ' + entry.duration + ' seconds/clip; 720p; ×' + entry.retry,
+          formatPair([v.whLow, v.whHigh], fmtEnergy) + ' (mean ' + fmtEnergy(v.wh) + ')',
+          formatPair([v.carbonLow, v.carbonHigh], fmtCarbon) + ' (mean ' + fmtCarbon(v.carbon) + ')', fmtWater(v.water)]);
+      });
+      html += table(['Entry', 'Inputs', 'Energy/day', 'Derived carbon/day', 'Derived water/day'], media);
+      html += '<h2>Coding sessions — whole project</h2>' + table(['Session/model', 'Lines', 'Estimated tokens', 'Energy', 'Carbon', 'Water', 'Included once in pie'], state.codingSessions.map((session, i) => [
+        (i + 1) + '. ' + getModel(session.model).name, session.lines, Math.round(tokensForLines(session.lines)), ...point(codingSessionValues(session)), session.includeInPie ? 'Yes' : 'No']));
+      html += '<p>Whole-project total: ' + point(codingProjectTotals()).join('; ') + '. All sessions count once. Excluded from daily/yearly AI totals.</p>';
+      const activities = [];
+      for (const activity of ACTIVITIES) {
+        const v = activityValues(activity.id);
+        activities.push([activity.label + ' — ' + state.activities[activity.id] + ' h/day', 'Daily', ...period(v, 1)]);
+        activities.push([activity.label, 'Yearly', ...period(v, DAYS)]);
+      }
+      activities.push(['Combined activities (router excluded)', 'Daily', ...period(digitalLifeTotals(), 1)], ['Combined activities (router excluded)', 'Yearly', ...period(digitalLifeTotals(), DAYS)]);
+      html += '<h2>Digital-life activities</h2>' + table(['Activity/input', 'Period', 'Energy', 'Carbon', 'Derived water'], activities);
+      html += ACTIVITIES.map((activity) => '<p><strong>' + activity.label + ':</strong> ' + activity.note + '</p>').join('');
+      const router = routerValues();
+      html += '<h2>Router — separate infrastructure</h2><p>Assumed power: ' + state.routerWatts + ' W; 24 hours/day. Daily: ' + point({ wh: router.kwh * 1000, ...router }).join('; ') +
+        '. Yearly: ' + point({ wh: router.kwh * 1000 * DAYS, carbon: router.carbon * DAYS, water: router.water * DAYS }).join('; ') + '. Carbon and water are derived.</p>';
+      const pie = pieContributions().sort((a, b) => b.value - a.value), total = pie.reduce((sum, row) => sum + row.value, 0);
+      html += '<h2>One-day breakdown — ' + state.metric + ', ' + state.pieBound + ' estimate</h2><p>Total: ' + fmtMetric(total) + '. Selected coding sessions occur once on this illustrated day; no annual repetition is assumed. Summed endpoints are scenarios, not total confidence limits.</p>' +
+        table(['Contribution', 'Estimate shown', 'Source endpoints', 'Share'], pie.map((row) => [row.label, fmtMetric(row.value), formatPair([row.low, row.high], fmtMetric), (row.value / total * 100).toFixed(1) + '%']));
+      html += '<h2>Company scenario</h2><p>' + state.headcount + ' employees repeating the entered daily AI use for 365 days: ' + fmtEnergy(aiDailyEnergy() * DAYS * state.headcount) + '; ' + fmtCarbon(aiDaily('carbon') * DAYS * state.headcount) + '; ' + fmtWater(aiDaily('water') * DAYS * state.headcount) + '. Coding projects, activities, and router excluded.</p>';
+      // Copy the current visible evidence so report limitations cannot lag behind it.
+      if (root) {
+        html += '<h2>Sources, methods, and limitations</h2>';
+        for (const node of root.querySelectorAll('.aipf-usage-section .aipf-hint, #aipf-router-title ~ details .aipf-hint, #methodology .aipf-method-body')) html += node.outerHTML.replace(/href="#([^"]+)"/g, (_, id) => 'href="' + location.origin + location.pathname + '#' + id + '"').replace(/ onclick="[^"]*"/g, '');
+      }
+      return html;
     }
     function reportHTML() {
       let rowsHtml = '', aiDay = 0, aiMin = 0, aiMax = 0, eD = 0, wDay = 0, wMin = 0, wMax = 0;
@@ -1230,25 +1551,23 @@ const structuredData = [
         const per = ct[0], d = n * per;
         aiDay += d; aiMin += n * ct[1]; aiMax += n * ct[2]; eD += n * md.sizes[r.size].wh;
         wDay += n * wt[0]; wMin += n * wt[1]; wMax += n * wt[2];
-        rowsHtml += '<tr><td>' + escXml(md.name) + '</td><td>' + escXml(sizeLabel(r.model, SIZES.find((x) => x.id === r.size))) + '</td><td class="n">' + r.count + (retry > 1 ? ' × ' + retry : '') + '</td><td class="n">' + fmtCarbon(d) + '</td><td class="n">' + fmtWater(n * wt[0]) + '</td></tr>';
+        rowsHtml += '<tr><td>' + escXml(md.name) + '</td><td>' + escXml(sizeLabel(r.model, SIZES.find((x) => x.id === r.size))) + '</td><td class="n">' + r.count + (' × ' + retry) + '</td><td class="n">' + formatPair([n * md.sizes[r.size].whmin, n * md.sizes[r.size].whmax], fmtEnergy) + '</td><td class="n">' + formatPair([n * ct[1], n * ct[2]], fmtCarbon) + ' (mean ' + fmtCarbon(d) + ')' + '</td><td class="n">' + formatPair([n * wt[1], n * wt[2]], fmtWater) + ' (mean ' + fmtWater(n * wt[0]) + ')' + '</td></tr>';
       }
+      [aiDay, aiMin, aiMax] = aiDailyTriple('carbon');
+      [wDay, wMin, wMax] = aiDailyTriple('water');
+      eD = aiDailyEnergy();
       const aiYr = aiDay * DAYS, wYr = wDay * DAYS;
-      const day = dailyFootprint('carbon');
-      const pct = day > 0 ? (aiDay / day) * 100 : 0;
-      const pctStr = pct >= 1 ? pct.toFixed(pct >= 10 ? 0 : 1) + '%' : pct >= 0.01 ? pct.toFixed(2) + '%' : pct > 0 ? 'under 0.01%' : '0%';
-      const dayW = dailyFootprint('water');
-      const pctW = dayW > 0 ? (wDay / dayW) * 100 : 0;
-      const pctWStr = pctW >= 1 ? pctW.toFixed(pctW >= 10 ? 0 : 1) + '%' : pctW >= 0.01 ? pctW.toFixed(2) + '%' : pctW > 0 ? 'under 0.01%' : '0%';
-      const loc = getLoc(), home = HOMES.find((x) => x.id === state.home), drive = DRIVING.find((x) => x.id === state.drive), diet = DIETS.find((x) => x.id === state.diet), fly = FLYING.find((x) => x.id === state.fly);
-      const fp = [['Where I live (' + loc.label + ')', loc.c], ['Home (' + home.label + ')', home.c], ['Driving (' + drive.label + ')', drive.c], ['Diet (' + diet.label + ')', diet.c], ['Flying (' + fly.label + ')', fly.c]];
-      let fpHtml = '';
-      for (const f of fp) fpHtml += '<tr><td>' + escXml(f[0]) + '</td><td class="n">' + fmtCarbon(f[1] * 1000) + ' / yr</td></tr>';
+      const loc = getLoc();
       const dailyRows = [{ label: 'My daily AI use', v: aiDay, focal: true }].concat(DAILY_ITEMS.map((it) => ({ label: it.label, v: it.c * 1000 })));
       const addRows = [{ label: 'A year of my AI use', v: aiYr, focal: true }].concat(ANNUAL_ITEMS.filter((it) => it.dir === 'add').map((it) => ({ label: it.label, v: it.c * 1000 })));
       const cutRows = [{ label: 'Cut my AI use', v: aiYr, focal: true }].concat(ANNUAL_ITEMS.filter((it) => it.dir === 'save').map((it) => ({ label: it.label, v: it.c * 1000 })));
       const dailyWaterRows = [{ label: 'My daily AI use', v: wDay, focal: true }].concat(DAILY_WATER_ITEMS.map((it) => ({ label: it.label, v: it.w * GAL_TO_L })));
       const addWaterRows = [{ label: 'A year of my AI use', v: wYr, focal: true }].concat(ANNUAL_WATER_ITEMS.filter((it) => it.dir === 'add').map((it) => ({ label: it.label, v: it.w * GAL_TO_L })));
       const cutWaterRows = [{ label: 'Cut my AI use', v: wYr, focal: true }].concat(ANNUAL_WATER_ITEMS.filter((it) => it.dir === 'save').map((it) => ({ label: it.label, v: it.w * GAL_TO_L })));
+      dailyRows.push(...reportComparisonRows('carbon', 1, true));
+      dailyWaterRows.push(...reportComparisonRows('water', 1, true));
+      addRows.push(...reportComparisonRows('carbon', DAYS));
+      addWaterRows.push(...reportComparisonRows('water', DAYS));
       let refsHtml = '';
       REPORT_REFS.forEach((r, i) => { refsHtml += '<li id="ref' + (i + 1) + '">[' + (i + 1) + '] ' + escXml(r.label) + ' <a href="' + r.url + '">' + escXml(r.url) + '</a></li>'; });
       const fn = (n) => '<sup><a href="#ref' + n + '">[' + n + ']</a></sup>';
@@ -1261,31 +1580,27 @@ const structuredData = [
         'table{border-collapse:collapse;width:100%;font-size:.85rem;margin:.5rem 0;}th,td{text-align:left;padding:.35rem .5rem;border-bottom:1px solid #eee;}' +
         'th{color:#6B6E66;font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;}' +
         '.big{font-size:2.1rem;font-weight:700;}a{color:#1f5a7a;}sup a{text-decoration:none;}ol.refs{font-size:.8rem;color:#444;padding-left:1.2rem;}ol.refs li{margin:.35rem 0;word-break:break-word;}' +
-        '.muted{color:#6B6E66;font-size:.85rem;}@media print{a{color:#000;}body{margin:0;}}</style></head><body>' +
+        '.table-wrap{overflow-x:auto;}td,th{overflow-wrap:anywhere;} .muted{color:#6B6E66;font-size:.85rem;}@media print{a{color:#000;}body{margin:0;}}</style></head><body>' +
         '<h1>How my AI use contributes to my carbon emissions and water use</h1>' +
         '<p class="date">Generated ' + date + ', based on exactly the inputs below.</p>' +
         '<h2>1. What I entered</h2>' +
-        '<table><thead><tr><th>Model</th><th>Typical output</th><th class="n">Prompts/day</th><th class="n">CO₂e/day</th><th class="n">Water/day</th></tr></thead><tbody>' +
-        (rowsHtml || '<tr><td colspan="5">No usage entered.</td></tr>') + '</tbody></table>' +
-        '<p class="muted">Per-prompt figures come from the EcoLogits model' + fn(1) + '; the electricity is costed on the ' + escXml(loc.label) + ' grid' + fn(2) + ', and EcoLogits’ embodied hardware emissions are kept.</p>' +
+        '<table><thead><tr><th>Model</th><th>Typical output</th><th class="n">Prompts/day × generations</th><th class="n">Energy/day</th><th class="n">CO₂e/day</th><th class="n">Water/day</th></tr></thead><tbody>' +
+        (rowsHtml || '<tr><td colspan="6">No text usage entered.</td></tr>') + '</tbody></table>' +
+        '<p class="muted">Per-prompt figures come from the EcoLogits model' + fn(1) + '; the electricity is costed on ' + escXml(loc.label) + ' grid' + fn(2) + ', and EcoLogits’ embodied hardware emissions are kept.</p>' +
         '<h2>2. My AI carbon</h2>' +
-        '<p>Across these prompts, my AI use comes to about <strong>' + fmtCarbon(aiDay) + ' per day</strong> (range ' + fmtCarbon(aiMin) + ' to ' + fmtCarbon(aiMax) + '), or <strong>' + fmtCarbon(aiYr) + ' per year</strong>, drawing about ' + fmtEnergy(eD) + ' of electricity a day.' + fn(1) + fn(2) + ' The range is EcoLogits’ 95% interval, mostly uncertainty in the parameter counts of closed models.' + fn(1) + '</p>' +
-        '<h2>3. How that compares with the rest of my life</h2>' +
-        '<p><span class="big">' + pctStr + '</span><br>of an average day of my own carbon footprint (' + fmtCarbon(day) + ' / day), built from:</p>' +
-        '<table><tbody>' + fpHtml + '</tbody></table>' +
-        '<p class="muted">Regional baseline' + fn(3) + '; home energy' + fn(4) + '; driving' + fn(5) + '; diet' + fn(6) + '; flying' + fn(7) + '.</p>' +
-        '<h2>4. My daily AI use, next to everyday things</h2>' + reportBarsSVG(dailyRows) +
+        '<p>Across text, image, and video entries, my AI use comes to about <strong>' + fmtCarbon(aiDay) + ' per day</strong> ' + (aiMin === aiMax ? '(point estimate)' : '(range ' + fmtCarbon(aiMin) + ' to ' + fmtCarbon(aiMax) + ')') + ', or <strong>' + fmtCarbon(aiYr) + ' per year</strong>, drawing about ' + fmtEnergy(eD) + ' of electricity a day (' + fmtEnergy(eD * DAYS) + ' per year).'  + fn(1) + fn(2) + ' Combined endpoints sum text estimates and video source endpoints; image estimates are single points. This combined range is not a statistical confidence interval. Project sessions remain separate.' + fn(1) + '</p>' +
+        '<h2>3. My daily AI use, next to everyday things</h2><p>The coding comparison is the whole project once, not a day or a year. Fixed references are approximate context; gaming bars show the upper endpoint with the full range labeled.</p>' + reportBarsSVG(dailyRows) +
         '<p class="muted">Everyday comparisons from diet' + fn(6) + ', driving' + fn(5) + ', and product life-cycle studies listed on the source page.</p>' +
-        '<h2>5. In a year, ways I add emissions</h2>' + reportBarsSVG(addRows) +
-        '<h2>6. In a year, ways I could cut emissions</h2>' + reportBarsSVG(cutRows) +
+        '<h2>4. In a year, ways I add emissions</h2>' + reportBarsSVG(addRows) +
+        '<h2>5. In a year, ways I could cut emissions</h2>' + reportBarsSVG(cutRows) +
         '<p class="muted">Lifestyle-cut figures from the Founders Pledge comparison' + fn(9) + ', drawing on Wynes &amp; Nicholas' + fn(7) + ' and Ivanova et al.' + fn(8) + '</p>' +
-        '<h2>7. My AI water</h2>' +
-        '<p>The same prompts consume about <strong>' + fmtWater(wDay) + ' of water a day</strong> (range ' + fmtWater(wMin) + ' to ' + fmtWater(wMax) + '), or <strong>' + fmtWater(wYr) + ' a year</strong> — <span class="big">' + pctWStr + '</span> of my daily blue-water footprint (' + fmtWater(dayW) + '). All water figures here are blue water (freshwater drawn from rivers, lakes, and aquifers); green rainwater and grey pollution-dilution water are excluded, so the AI and lifestyle figures match.' + fn(1) + fn(10) + '</p>' +
-        '<h2>8. My daily AI water, next to everyday things</h2>' + reportBarsSVG(dailyWaterRows, fmtWater) +
-        '<h2>9. In a year, water I add</h2>' + reportBarsSVG(addWaterRows, fmtWater) +
-        '<h2>10. In a year, water I could cut</h2>' + reportBarsSVG(cutWaterRows, fmtWater) +
+        '<h2>6. My AI water</h2>' +
+        '<p>The same daily AI entries consume about <strong>' + fmtWater(wDay) + ' of water a day</strong> ' + (wMin === wMax ? '(point estimate)' : '(range ' + fmtWater(wMin) + ' to ' + fmtWater(wMax) + ')') + ', or <strong>' + fmtWater(wYr) + ' a year</strong>. AI water retains the EcoLogits basis for text; media water is derived from electricity-generation cooling only. Some legacy comparisons use broader water footprints, so their boundaries do not fully match. See the methodology and limitations below.' + fn(1) + fn(10) + '</p>' +
+        '<h2>7. My daily AI water, next to everyday things</h2>' + reportBarsSVG(dailyWaterRows, fmtWater) +
+        '<h2>8. In a year, water I add</h2>' + reportBarsSVG(addWaterRows, fmtWater) +
+        '<h2>9. In a year, water I could cut</h2>' + reportBarsSVG(cutWaterRows, fmtWater) +
         '<p class="muted">Water comparisons from EcoLogits' + fn(1) + ' and the Water Footprint Network' + fn(10) + '.</p>' +
-        '<h2>References</h2><ol class="refs">' + refsHtml + '</ol>' +
+        reportDetailsHTML() + '<h2>References</h2><ol class="refs">' + refsHtml + '</ol>' +
         '</body></html>';
     }
     function generateReport() {
@@ -1299,22 +1614,45 @@ const structuredData = [
       root.querySelectorAll('.aipf-metric').forEach((b) => { const on = b.dataset.metric === state.metric; b.classList.toggle('is-active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
       root.dataset.metric = state.metric;
     }
+    async function copyResult(button, value, successLabel) {
+      const label = button.textContent;
+      const previous = button.parentElement.querySelector('.aipf-copy-fallback');
+      if (previous) previous.remove();
+      try {
+        await navigator.clipboard.writeText(value);
+        button.textContent = successLabel;
+        setTimeout(() => { button.textContent = label; }, 1800);
+      } catch {
+        const fallback = el('div', 'aipf-copy-fallback');
+        const message = el('p', '', 'Automatic copying is unavailable. Select and copy the text below.');
+        message.setAttribute('role', 'status');
+        const input = document.createElement('textarea');
+        input.readOnly = true; input.value = value;
+        input.setAttribute('aria-label', 'Text to copy manually');
+        input.style.width = '100%';
+        fallback.appendChild(message); fallback.appendChild(input);
+        button.parentElement.appendChild(fallback);
+        input.focus(); input.select();
+      }
+    }
     function bindEvents() {
       root.querySelector('#aipf-addrow').addEventListener('click', () => { state.rows.push({ uid: uidSeq++, model: 'gpt-5.5', size: 'chat', count: 1, retry: 1 }); renderRows(); updateOutputs(); });
       root.querySelector('#aipf-addrow-code').addEventListener('click', () => {
         state.codingSessions.push({ uid: uidSeq++, model: 'gpt-5.5', lines: REF_LINES_STANDARD });
-        renderCodeRows(); renderProjectTotal();
+        renderCodeRows(); renderProjectTotal(); renderPie(); renderDaily();
       });
-      root.querySelector('#aipf-reset').addEventListener('click', () => { setDefaultRows(); state.codingSessions = []; renderRows(); updateOutputs(); });
-      root.querySelector('#aipf-share').addEventListener('click', (e) => {
-        const btn = e.currentTarget;
-        const done = () => { btn.textContent = 'Link copied'; setTimeout(() => { btn.textContent = 'Copy a link to this estimate'; }, 1800); };
-        try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(buildShareURL()).then(done, done); else done(); } catch (err) { done(); }
+      root.querySelector('#aipf-addrow-image').addEventListener('click', () => {
+        state.images.push({ uid: uidSeq++, count: 1, retry: 1 }); renderMediaRows('image'); updateOutputs();
       });
-      root.querySelector('#aipf-share-summary').addEventListener('click', (e) => {
-        const btn = e.currentTarget;
-        const done = () => { btn.textContent = 'Summary copied'; setTimeout(() => { btn.textContent = 'Copy my summary'; }, 1800); };
-        try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(buildSummaryText()).then(done, done); else done(); } catch (err) { done(); }
+      root.querySelector('#aipf-addrow-video').addEventListener('click', () => {
+        state.videos.push({ uid: uidSeq++, count: 1, duration: VIDEO_REF_SECONDS, retry: 1 }); renderMediaRows('video'); updateOutputs();
+      });
+      root.querySelector('#aipf-reset').addEventListener('click', () => { setDefaultRows(); state.codingSessions = []; state.images = []; state.videos = []; state.routerWatts = DEFAULT_ROUTER_WATTS; state.pieBound = 'low'; for (const id of Object.keys(state.activities)) state.activities[id] = 0; renderRows(); renderActivityInputs(); renderRouterInput(); updateOutputs(); });
+      root.querySelector('#aipf-share').addEventListener('click', (event) => {
+        copyResult(event.currentTarget, buildShareURL(), 'Link copied');
+      });
+      root.querySelector('#aipf-share-summary').addEventListener('click', (event) => {
+        copyResult(event.currentTarget, buildSummaryText(), 'Summary copied');
       });
       const rb = root.querySelector('#aipf-report'); if (rb) rb.addEventListener('click', generateReport);
       const eb = root.querySelector('#aipf-embed-copy');
@@ -1325,37 +1663,24 @@ const structuredData = [
       });
       root.querySelector('#aipf-loc').addEventListener('change', (e) => {
         state.loc = e.target.value;
-        const d = COUNTRY_DIET[state.loc];
-        if (d) { state.diet = d; const ds = root.querySelector('#aipf-diet'); if (ds) ds.value = d; }
         updateOutputs();
       });
-      root.querySelector('#aipf-home').addEventListener('change', (e) => { state.home = e.target.value; updateOutputs(); });
-      root.querySelector('#aipf-drive').addEventListener('change', (e) => { state.drive = e.target.value; updateOutputs(); });
-      root.querySelector('#aipf-diet').addEventListener('change', (e) => { state.diet = e.target.value; updateOutputs(); });
-      root.querySelector('#aipf-fly').addEventListener('change', (e) => { state.fly = e.target.value; updateOutputs(); });
       root.querySelectorAll('.aipf-metric').forEach((b) => { b.addEventListener('click', () => { state.metric = b.dataset.metric; renderMetricToggle(); updateOutputs(); }); });
-      root.querySelectorAll('.aipf-pagetab').forEach((tab) => {
-        tab.addEventListener('click', () => {
-          root.querySelectorAll('.aipf-pagetab').forEach((t) => { t.classList.toggle('is-active', t === tab); t.setAttribute('aria-selected', String(t === tab)); });
-          root.querySelectorAll('.aipf-tabpanel').forEach((p) => { p.hidden = p.id !== 'aipf-tab-' + tab.dataset.tab; });
-          if (tab.dataset.tab === 'water') {
-            const iframe = root.querySelector('#aipf-water-iframe');
-            if (iframe && !iframe.src) iframe.src = iframe.dataset.src;
-          }
-        });
+      root.querySelector('#aipf-pie-metric').addEventListener('change', (event) => {
+        state.metric = event.target.value; renderMetricToggle(); updateOutputs();
       });
-      root.querySelector('#aipf-headcount').addEventListener('input', (e) => {
-        const n = Math.round(Number(e.target.value));
-        state.headcount = Number.isFinite(n) && n > 0 ? Math.min(n, 1000000) : 1;
-        updateOutputs();
+      root.querySelector('#aipf-pie-bound').addEventListener('change', (event) => {
+        state.pieBound = event.target.value; renderPie();
       });
+      bindIntegerInput(root.querySelector('#aipf-headcount'), 1, 1000000, () => state.headcount, (value) => { state.headcount = value; updateOutputs(); });
     }
     function init() {
       root = document.getElementById('aipf');
       if (!root || root.dataset.ready === '1') return;
       root.dataset.ready = '1';
       setDefaultRows(); readURL();
-      renderRows(); renderLifeSelects(); renderMetricToggle(); bindEvents(); updateOutputs();
+      root.querySelector('#aipf-headcount').value = String(state.headcount);
+      renderRows(); renderActivityInputs(); renderRouterInput(); renderLocationSelect(); renderMetricToggle(); bindEvents(); updateOutputs();
     }
     document.addEventListener('astro:page-load', init);
     if (document.readyState !== 'loading') init();
@@ -1381,13 +1706,26 @@ const structuredData = [
      --bar-bright/--bar-dark are a separate pair used only for the per-bar fill
      gradient (least amount = brightest, most = darkest), kept lighter and more
      saturated than --accent-subtle so both ends stay legible on a dark page. */
-  .aipf { --bar-bright: #4fd88a; --bar-dark: #1d5c3d; }
+  .aipf {
+    --bar-bright: #4fd88a; --bar-dark: #1d5c3d;
+    /* Category colors stay consistent when switching carbon/water metrics. */
+    --pie-green: #2f6f4f; --pie-blue: #2f6a94;
+    --pie-gold: #8a6e32; --pie-purple: #75528b;
+    --pie-call-blue: #233e85; --pie-rose: #a34f70;
+    --pie-orange: #ad602e; --pie-router: #174b2d;
+  }
   .aipf[data-metric="water"] {
     --accent: #2f6a94; --accent-hover: #23516f; --accent-subtle: #e3edf4;
     --bar-bright: #5ec8f5; --bar-dark: #1a4d73;
   }
   @media (prefers-color-scheme: dark) {
-    .aipf { --bar-bright: #9ff2c2; --bar-dark: #2f9d68; }
+    .aipf {
+      --bar-bright: #9ff2c2; --bar-dark: #2f9d68;
+      --pie-green: #6fbf94; --pie-blue: #74b3e0;
+      --pie-gold: #c4aa6e; --pie-purple: #b095ce;
+      --pie-call-blue: #3658ab; --pie-rose: #da8da9;
+      --pie-orange: #dfa06e; --pie-router: #287044;
+      }
     .aipf[data-metric="water"] {
       --accent: #74b3e0; --accent-hover: #93c5e8; --accent-subtle: #1c2733;
       --bar-bright: #a8ddfa; --bar-dark: #2f7fc0;
@@ -1405,34 +1743,24 @@ const structuredData = [
   }
   .aipf-dek { font-size: 0.95rem; line-height: 1.5; color: var(--text-secondary); margin: 0.5rem 0 0; }
 
-  /* ---- Page tabs: Calculator vs. the water-use embed ---- */
-  .aipf-pagetabs { display: flex; gap: 1.5rem; margin: 0 0 1.4rem; border-bottom: 1px solid var(--border); }
-  .aipf-pagetab {
-    background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px;
-    padding: 0.6rem 0.1rem; font-family: var(--font-body); font-size: 0.92rem; font-weight: 600;
-    color: var(--dim); cursor: pointer; transition: color 0.12s, border-color 0.12s;
-  }
-  .aipf-pagetab:hover { color: var(--text); }
-  .aipf-pagetab.is-active { color: var(--accent); border-bottom-color: var(--accent); }
-  .aipf-water-embed { border: 1px solid var(--border); background: var(--bg-elevated); }
-  .aipf-water-embed iframe { display: block; width: 100%; height: 85vh; min-height: 600px; border: 0; }
-
   /* ---- Tool: two panes in one frame ---- */
   .aipf-tool { display: grid; grid-template-columns: 1.35fr 1fr; border: 1px solid var(--border); background: var(--bg-elevated); }
   .aipf-below { background: var(--bg-elevated); border: 1px solid var(--border); padding: 1.1rem 1.25rem; }
   .aipf-in { padding: 1.1rem 1.25rem; min-width: 0; }
   .aipf-out { padding: 1.1rem 1.25rem; border-left: 1px solid var(--border); min-width: 0; background: var(--bg-subtle); }
 
-  .aipf-in-head { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.7rem; font-weight: 600; font-size: 1rem; }
-  .aipf-in-sub { font-family: var(--font-body); font-size: 0.7rem; color: var(--dim); letter-spacing: 0.02em; }
+  .aipf-in-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem 0.75rem; margin-bottom: 1.5rem; }
+  .aipf-in-head h2 { font-family: var(--font-editorial); font-weight: 700; font-size: 1.8rem; line-height: 1.15; color: var(--text); margin: 0; }
+  .aipf-in-sub { font-family: var(--font-body); font-size: 0.75rem; font-weight: 400; color: var(--dim); }
   .aipf-hint { font-family: var(--font-body); font-size: 0.78rem; line-height: 1.5; color: var(--dim); margin: 0 0 0.9rem; }
-  .aipf-writes + .aipf-hint { margin-top: 2rem; padding-top: 1.3rem; border-top: 1px solid var(--border); }
+  .aipf-pie-section + .aipf-hint { margin-top: 2rem; padding-top: 1.3rem; border-top: 1px solid var(--border); }
 
-  /* ---- Usage sub-sections (chatbot/text, coding agent — media generation joins later) ---- */
-  .aipf-usage-section + .aipf-usage-section { margin-top: 1.3rem; padding-top: 1.1rem; border-top: 1px solid var(--border); }
+  /* ---- Usage sub-sections: chatbot/text, coding projects, media ---- */
+  .aipf-usage-section + .aipf-usage-section { margin-top: 1.6rem; padding-top: 1.4rem; border-top: 1px solid var(--border); }
   .aipf-usage-h {
-    font-family: var(--font-body); font-weight: 600; font-size: 0.72rem; text-transform: uppercase;
-    letter-spacing: 0.06em; color: var(--text-secondary); margin: 0 0 0.55rem;
+    font-family: var(--font-body); font-weight: 700; font-size: 1.2rem; line-height: 1.35;
+    color: var(--accent); margin: 0 0 0.9rem;
+    border-left: 3px solid var(--accent); padding-left: 0.65rem;
   }
 
   .aipf-rows-head {
@@ -1443,8 +1771,14 @@ const structuredData = [
   .aipf-rows-head span:nth-child(3), .aipf-rows-head span:nth-child(4) { text-align: center; }
   .aipf-rows-head--code { grid-template-columns: 1fr auto 1.1rem; }
   .aipf-rows-head--code span:nth-child(2) { text-align: center; }
+  .aipf-usage-subh { font-family: var(--font-body); font-size: 1rem; font-weight: 600; line-height: 1.4; color: var(--text); margin: 1.25rem 0 0.65rem; }
+  .aipf-rows-head--image, .aipf-row--image { grid-template-columns: 1fr auto 1.1rem; }
+  .aipf-rows-head--video, .aipf-row--video { grid-template-columns: 1fr auto auto 1.1rem; }
+  .aipf-row--image .aipf-stepper, .aipf-row--video .aipf-stepper { justify-self: start; }
   .aipf-rowwrap { padding: 0.45rem 0; border-bottom: 1px solid var(--border); }
   .aipf-row { display: grid; grid-template-columns: 1fr 1.3fr auto auto 1.1rem; gap: 0.6rem; align-items: center; }
+  .aipf-row--image { grid-template-columns: 1fr auto 1.1rem; }
+  .aipf-row--video { grid-template-columns: 1fr auto auto 1.1rem; }
   .aipf-row--code { grid-template-columns: 1fr auto 1.1rem; }
   .aipf-row-meta { font-family: var(--font-body); font-size: 0.67rem; color: var(--dim); margin-top: 0.3rem; font-variant-numeric: tabular-nums; }
   .aipf-empty { color: var(--dim); padding: 0.8rem 0; font-size: 0.9rem; }
@@ -1463,6 +1797,9 @@ const structuredData = [
   .aipf select:hover { border-color: var(--accent); }
   .aipf select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
+  .aipf-number-error { display: block; font-size: 0.8rem; color: var(--text); margin-top: 0.35rem; }
+  .aipf-number-error[hidden] { display: none; }
+  .aipf input[aria-invalid="true"] { outline: 2px solid var(--accent); outline-offset: 1px; }
   .aipf-stepper { display: inline-flex; align-items: center; gap: 0.2rem; border: 1px solid var(--border-strong); border-radius: 5px; background: var(--bg-subtle); padding: 0 0.1rem; }
   .aipf-step { width: 1.3rem; height: 1.6rem; border: none; background: none; color: var(--text-secondary); font-size: 1.05rem; line-height: 1; cursor: pointer; font-family: var(--font-body); transition: color 0.12s; }
   .aipf-step:hover { color: var(--accent); }
@@ -1498,11 +1835,16 @@ const structuredData = [
   .aipf-project-total b { color: var(--text); }
 
   .aipf-addrow {
-    margin: 0.9rem 0 0; background: none; border: none; padding: 0; color: var(--accent);
-    font-family: var(--font-body); font-size: 0.82rem; cursor: pointer;
-    text-decoration: underline; text-underline-offset: 3px;
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 44px; max-width: 100%; margin: 0.85rem 0 0.9rem; padding: 0.55rem 0.9rem;
+    border: 1px solid var(--accent); border-radius: 6px;
+    background: var(--accent-subtle); color: var(--accent);
+    font-family: var(--font-body); font-size: 0.85rem; font-weight: 600; line-height: 1.3;
+    text-decoration: none; cursor: pointer;
   }
-  .aipf-addrow:hover { color: var(--accent-hover); }
+  .aipf-addrow:hover { background: var(--accent); color: var(--bg-elevated); }
+  .aipf-addrow:active { background: var(--accent-hover); color: var(--bg-elevated); }
+  .aipf-addrow:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
   .aipf-running { margin: 1rem 0 0; padding-top: 0.9rem; border-top: 1px solid var(--border); font-size: 1.05rem; line-height: 1.6; color: var(--text-secondary); }
   .aipf-tools { margin: 0.6rem 0 0; font-family: var(--font-body); font-size: 0.78rem; color: var(--dim); }
@@ -1513,17 +1855,6 @@ const structuredData = [
 
   /* ---- Output pane ---- */
   .aipf-out-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
-  .aipf-life { font-size: 0.9rem; line-height: 2; color: var(--text-secondary); margin: 0; flex: 1 1 16rem; }
-  .aipf-nw { white-space: nowrap; }
-  .aipf-life select {
-    font-family: var(--font-body); font-size: 0.84rem; font-weight: 600; color: var(--text);
-    background-color: var(--bg-elevated); border: 1px solid var(--border-strong); border-radius: 5px;
-    padding: 0.14rem 1.35rem 0.14rem 0.5rem;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'%3E%3Cpath d='M1 1l3.5 3.5L8 1' stroke='%236B6E66' stroke-width='1.6' fill='none'/%3E%3C/svg%3E");
-    background-position: right 0.45rem center;
-  }
-  .aipf-life select:hover { border-color: var(--accent); color: var(--accent); }
-  .aipf-life select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .aipf-headcount {
     font-family: var(--font-body); font-size: 0.84rem; font-weight: 600; color: var(--text);
     background-color: var(--bg-elevated); border: 1px solid var(--border-strong); border-radius: 5px;
@@ -1551,19 +1882,16 @@ const structuredData = [
   .aipf-metric.is-active { background: var(--accent); color: var(--bg-elevated); font-weight: 600; }
   .aipf-metric:hover:not(.is-active) { color: var(--text); background: var(--bg-subtle); }
 
-  .aipf-verdict { margin: 0; }
+  .aipf-verdict { margin: 1.5rem 0 0; }
+  .aipf-grid-setting { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+  .aipf-digital { margin-top: 1rem; }
   .aipf-verdict-fig {
     font-family: var(--font-editorial); font-weight: 600;
-    font-size: clamp(2.9rem, 2rem + 3.4vw, 4.4rem); line-height: 0.9; letter-spacing: -0.03em;
+    font-size: clamp(1.6rem, 1.2rem + 2vw, 3rem); overflow-wrap: anywhere; line-height: 0.9; letter-spacing: -0.03em;
     color: var(--text); font-variant-numeric: tabular-nums;
   }
   .aipf-verdict-say { font-size: 1.18rem; line-height: 1.25; color: var(--text); margin: 0.35rem 0 0; }
   .aipf-verdict-detail { font-family: var(--font-body); font-size: 0.78rem; line-height: 1.5; color: var(--dim); margin: 0.6rem 0 0; font-variant-numeric: tabular-nums; }
-  .aipf-words-miles { display: block; margin-top: 0.9rem; padding-top: 0.9rem; border-top: 1px solid var(--border); }
-  .aipf-prop { height: 16px; background: var(--border); margin-top: 0.85rem; overflow: hidden; }
-  .aipf-prop-fill { height: 100%; background: var(--accent); min-width: 3px; }
-  .aipf-prop-cap { display: flex; justify-content: space-between; font-family: var(--font-body); font-size: 0.62rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dim); margin-top: 0.35rem; }
-  .aipf-prop-cap .accent { color: var(--accent); font-weight: 600; }
 
   .aipf-onepct { font-size: 0.88rem; line-height: 1.5; color: var(--text-secondary); margin: 0.85rem 0 0; }
   .aipf-fine { font-family: var(--font-body); font-size: 0.7rem; line-height: 1.45; color: var(--dim); margin: 0.7rem 0 0; }
@@ -1572,17 +1900,27 @@ const structuredData = [
   .aipf-chart-title { font-family: var(--font-body); font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); margin: 0 0 0.3rem; }
   .aipf-mini-h { font-family: var(--font-body); font-size: 0.72rem; color: var(--dim); margin: 0 0 0.7rem; }
 
-  /* ---- 'What it writes' under the totals ---- */
-  .aipf-writes { margin-top: 1rem; padding-top: 0.9rem; border-top: 1px solid var(--border); }
-  .aipf-writes-h { font-family: var(--font-body); font-size: 0.72rem; color: var(--dim); margin: 0 0 0.4rem; }
+  .aipf-pie-section { margin-top: 1.5rem; padding-top: 1.3rem; border-top: 1px solid var(--border); }
+  .aipf-pie-controls { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; margin: 0.8rem 0; font: 0.85rem var(--font-body); }
+  .aipf-pie-controls label { display: flex; align-items: center; gap: 0.4rem; }
+  .aipf-pie-total { font-weight: 600; line-height: 1.5; }
+  .aipf-pie-disc { width: min(100%, 240px); aspect-ratio: 1; border-radius: 50%; margin: 1rem auto; border: 1px solid var(--border-strong); }
+  .aipf-pie-table { width: 100%; border-collapse: collapse; font: 0.8rem/1.45 var(--font-body); margin-bottom: 1rem; }
+  .aipf-pie-table caption { text-align: left; font-weight: 600; padding-bottom: 0.5rem; }
+  .aipf-pie-table th, .aipf-pie-table td { text-align: left; padding: 0.5rem 0.3rem; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+  .aipf-pie-table td:last-child, .aipf-pie-table th:last-child { white-space: nowrap; overflow-wrap: normal; }
+  .aipf-pie-table tbody th { font-weight: 500; }
+  .aipf-pie-table small { display: block; color: var(--dim); margin-top: 0.2rem; }
+  .aipf-pie-swatch { display: inline-block; width: 0.65rem; height: 0.65rem; border: 1px solid var(--border-strong); margin-right: 0.4rem; }
+  .aipf-pie-session { display: flex; align-items: center; gap: 0.5rem; min-height: 44px; font: 0.8rem/1.4 var(--font-body); margin-top: 0.4rem; cursor: pointer; }
+  .aipf-pie-session input { width: 1.1rem; height: 1.1rem; accent-color: var(--accent); flex-shrink: 0; }
+  .aipf-pie-session input:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
   /* ---- Below: a year against bigger choices (full width) ---- */
   .aipf-below { margin-top: 1.25rem; }
   .aipf-h2 { font-family: var(--font-editorial); font-weight: 600; font-size: 1.1rem; letter-spacing: -0.01em; margin: 0 0 0.6rem; }
   .aipf-sub { font-size: 0.85rem; line-height: 1.5; color: var(--text-secondary); margin: 0 0 0.9rem; }
   .aipf-sub strong, .aipf-running b { color: var(--text); }
-  .aipf-words { font-size: 1rem; line-height: 1.65; color: var(--text-secondary); margin: 0; }
-  .aipf-words-code { display: block; margin-top: 0.7rem; }
 
   /* ---- Bars: squared, ink, on a baseline. Inline by default (annual). ---- */
   .aipf-bar-row { display: grid; grid-template-columns: 13rem 1fr auto; align-items: center; gap: 0.8rem; padding: 0.4rem 0; }
@@ -1595,7 +1933,7 @@ const structuredData = [
   }
   .aipf-bar-row:not(.is-focal):hover .aipf-bar-label,
   .aipf-bar-row:not(.is-focal):hover .aipf-bar-val { color: var(--text); }
-  .aipf-bar-track { height: 12px; background: var(--border); }
+  .aipf-bar-track { position: relative; height: 12px; background: var(--border); }
   /* Every bar carries the same light-to-dark gradient across its own width —
      the least amount reads brightest, gradually darkening toward the most. */
   .aipf-bar-fill { height: 100%; background: linear-gradient(to right, var(--bar-bright), var(--bar-dark)); }
@@ -1616,6 +1954,19 @@ const structuredData = [
   .aipf-bars--compact .aipf-bar-row.is-focal,
   .aipf-bars--compact .aipf-bar-row:not(.is-focal):hover { padding: 0.45rem 0.6rem; }
   .aipf-bars--compact .aipf-bar-row.is-focal .aipf-bar-track { height: 13px; }
+
+  .aipf-activities { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem 1.5rem; }
+  .aipf-activity { min-width: 0; }
+  .aipf-activity-label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.4rem; }
+  .aipf-hours { width: 7ch; max-width: 100%; padding: 0.4rem; border: 1px solid var(--border-strong); border-radius: 5px; font: inherit; background: var(--bg-subtle); color: var(--text); }
+  .aipf-hours:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .aipf-activity-results { font-size: 0.8rem; line-height: 1.5; font-variant-numeric: tabular-nums; }
+  .aipf-activity-source { font-size: 0.8rem; }
+  .aipf-activity-source summary { cursor: pointer; }
+  .aipf-bar-range { position: absolute; top: 0; height: 100%; background: repeating-linear-gradient(135deg, var(--dim) 0 2px, transparent 2px 5px); }
+  .aipf-bar-row:is(.is-digital, .is-router, .is-project) .aipf-bar-val { white-space: normal; }
+  .aipf-bars--compact .aipf-bar-row:is(.is-digital, .is-router, .is-project) { grid-template-columns: 1fr; grid-template-areas: "label" "value" "bar"; }
+  .aipf-bar-row:is(.is-digital, .is-router, .is-project) .aipf-bar-fill { min-width: 0; }
 
   /* ---- Methodology ---- */
   .aipf-method { margin-top: 1.75rem; border-top: 1px solid var(--border); padding-top: 1.1rem; max-width: 44rem; }
@@ -1660,6 +2011,11 @@ const structuredData = [
     .aipf-row .aipf-rowdel { grid-area: del; justify-self: end; }
     .aipf-row--code { grid-template-columns: auto 1fr; grid-template-areas: "model model" "lines del"; }
     .aipf-row--code .aipf-lines { grid-area: lines; justify-self: start; }
+    .aipf-row--image { grid-template-columns: auto auto 1fr; grid-template-areas: "stepper retry del"; }
+    .aipf-row--video { grid-template-columns: auto auto 1fr; grid-template-areas: "stepper retry del" "duration duration duration"; }
+    .aipf-row--video .aipf-duration { grid-area: duration; }
+    .aipf-activities { grid-template-columns: 1fr; }
+    .aipf-bar-row:is(.is-digital, .is-router, .is-project) { grid-template-columns: 1fr; grid-template-areas: "label" "value" "bar"; }
     /* Bigger touch targets */
     .aipf-step { width: 2rem; height: 2rem; font-size: 1.15rem; }
     .aipf-count { width: 3ch; height: 2rem; font-size: 0.95rem; }
@@ -1668,5 +2024,5 @@ const structuredData = [
     .aipf-report-btn { max-width: none; width: 100%; text-align: center; }
     .aipf-cc0 { align-items: flex-start; }
   }
-  @media (prefers-reduced-motion: reduce) { .aipf-prop-fill, .aipf select, .aipf-step, .aipf-metric, .aipf-link { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .aipf select, .aipf-step, .aipf-metric, .aipf-link { transition: none; } }
 </style>
